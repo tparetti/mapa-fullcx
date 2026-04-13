@@ -29,9 +29,15 @@
   @media(max-width:700px){main{grid-template-columns:1fr}.sidebar{display:none}}
   .sidebar{border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:12px}
   .sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:10px 8px 8px}
-  .company-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .company-item{padding:10px 10px 10px 8px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;display:flex;align-items:center;gap:6px;position:relative}
   .company-item:hover{background:var(--panel2)}
   .company-item.active{background:var(--panel3);border-color:var(--acc)}
+  .company-item.dragging{opacity:.4}
+  .company-item.drop-before{box-shadow:0 -2px 0 var(--acc)}
+  .company-item.drop-after{box-shadow:0 2px 0 var(--acc)}
+  .company-item .ci-drag{color:#cbd5e1;font-size:12px;cursor:grab;padding:0 2px;user-select:none;flex-shrink:0}
+  .company-item .ci-drag:hover{color:var(--acc)}
+  .company-item .ci-body{flex:1;min-width:0}
   .company-item .ci-name{font-weight:600;font-size:13px}
   .company-item .ci-sub{font-size:11px;color:var(--muted);margin-top:2px}
   .content{overflow:auto;padding:18px 22px}
@@ -517,8 +523,15 @@ function renderSidebar(){
   el.innerHTML=state.companies.map(function(c){
     var nc=c.contacts.length;
     var hot=c.contacts.filter(function(x){return x.status==='hot'||x.status==='booked'}).length;
-    return '<div class="company-item '+(c.id===state.selected?'active':'')+'" onclick="selectCompany(\''+c.id+'\')">'
-      +'<div><div class="ci-name">'+escapeHtml(c.name)+'</div><div class="ci-sub">'+escapeHtml(c.sector||'')+' · '+nc+' contatos'+(hot?' · 🔥'+hot:'')+'</div></div>'
+    return '<div class="company-item '+(c.id===state.selected?'active':'')+'" draggable="true" data-cid="'+c.id+'" '
+      +'ondragstart="onCoDragStart(event,\''+c.id+'\')" '
+      +'ondragend="onCoDragEnd(event)" '
+      +'ondragover="onCoOver(event)" '
+      +'ondragleave="onCoLeave(event)" '
+      +'ondrop="onCoDrop(event,\''+c.id+'\')" '
+      +'onclick="selectCompany(\''+c.id+'\')">'
+      +'<div class="ci-drag" title="Arraste pra reordenar">⋮⋮</div>'
+      +'<div class="ci-body"><div class="ci-name">'+escapeHtml(c.name)+'</div><div class="ci-sub">'+escapeHtml(c.sector||'')+' · '+nc+' contatos'+(hot?' · 🔥'+hot:'')+'</div></div>'
       +'</div>'
   }).join('');
 }
@@ -691,6 +704,46 @@ function deleteContact(){
   var c=state.companies.find(function(x){return x.id===editingCompany});
   c.contacts=c.contacts.filter(function(x){return x.id!==editingContact});
   save();render();closeModal('contactModal');
+}
+
+var _coDrag={id:null};
+function onCoDragStart(e,id){
+  _coDrag.id=id;
+  e.dataTransfer.effectAllowed='move';
+  try{e.dataTransfer.setData('text/plain',id)}catch(_){}
+  e.currentTarget.classList.add('dragging');
+  e.stopPropagation();
+}
+function onCoDragEnd(e){
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.company-item.drop-before,.company-item.drop-after').forEach(function(n){n.classList.remove('drop-before','drop-after')});
+  _coDrag.id=null;
+}
+function onCoOver(e){
+  if(!_coDrag.id)return;
+  e.preventDefault();e.stopPropagation();
+  var node=e.currentTarget;
+  if(node.dataset.cid===_coDrag.id)return;
+  var rect=node.getBoundingClientRect();
+  var before=(e.clientY-rect.top)<rect.height/2;
+  node.classList.toggle('drop-before',before);
+  node.classList.toggle('drop-after',!before);
+}
+function onCoLeave(e){
+  e.currentTarget.classList.remove('drop-before','drop-after');
+}
+function onCoDrop(e,targetId){
+  if(!_coDrag.id||_coDrag.id===targetId)return;
+  e.preventDefault();e.stopPropagation();
+  var rect=e.currentTarget.getBoundingClientRect();
+  var before=(e.clientY-rect.top)<rect.height/2;
+  var src=_coDrag.id;
+  var idx=state.companies.findIndex(function(x){return x.id===src});
+  if(idx<0)return;
+  var item=state.companies.splice(idx,1)[0];
+  var tidx=state.companies.findIndex(function(x){return x.id===targetId});
+  if(tidx<0){state.companies.push(item)} else {state.companies.splice(before?tidx:tidx+1,0,item)}
+  save();render();
 }
 
 var _drag={id:null,layer:null};
