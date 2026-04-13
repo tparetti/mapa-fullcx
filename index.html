@@ -154,6 +154,8 @@
     <button class="btn sm" onclick="openCompanyModal()">+ Empresa</button>
     <button class="btn sm ghost" onclick="exportData()">Exportar</button>
     <button class="btn sm ghost" onclick="importData()">Importar</button>
+    <span id="syncStatus" style="font-size:11px;color:var(--muted);align-self:center">sincronizado</span>
+    <button class="btn sm ghost" onclick="pullNow()" title="Puxar do cloud">↻</button>
     <button class="btn sm ghost" onclick="logout()" title="Bloquear">🔒</button>
   </div>
 </header>
@@ -332,6 +334,7 @@ Qualquer coisa, é só responder. Abraço.</div>
 var state={companies:[],selected:null};
 var editingCompany=null, editingContact=null;
 var _authKey=null;
+var _sync={token:null,gistId:null,loading:false,pending:false,lastPush:0};
 
 function uid(){return Date.now()+'-'+Math.random().toString(36).slice(2,7)}
 
@@ -363,8 +366,48 @@ async function loadState(){
 async function saveState(){
   var blob=await encryptState(_authKey,state);
   localStorage.setItem('fullcx_enc',JSON.stringify(blob));
+  schedulePush(blob);
 }
 function save(){saveState().catch(function(e){console.error(e)})}
+
+var _pushTimer=null;
+function schedulePush(blob){
+  if(!_sync.token||!_sync.gistId)return;
+  _sync.pending=true;
+  setStatus('salvando…');
+  clearTimeout(_pushTimer);
+  _pushTimer=setTimeout(function(){pushToCloud(blob).catch(function(e){console.error('push fail',e);setStatus('offline')})},800);
+}
+
+async function pushToCloud(blob){
+  if(!_sync.token||!_sync.gistId)return;
+  var body={files:{'data.enc.json':{content:JSON.stringify(blob)}}};
+  var r=await fetch('https://api.github.com/gists/'+_sync.gistId,{
+    method:'PATCH',
+    headers:{'Authorization':'Bearer '+_sync.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  if(!r.ok)throw new Error('push '+r.status);
+  _sync.pending=false;_sync.lastPush=Date.now();
+  setStatus('sincronizado');
+}
+
+async function pullFromCloud(){
+  if(!_sync.token||!_sync.gistId)return null;
+  var r=await fetch('https://api.github.com/gists/'+_sync.gistId,{
+    headers:{'Authorization':'Bearer '+_sync.token,'Accept':'application/vnd.github+json'},
+    cache:'no-store'
+  });
+  if(!r.ok)throw new Error('pull '+r.status);
+  var j=await r.json();
+  var f=j.files&&j.files['data.enc.json'];
+  if(!f)return null;
+  try{return JSON.parse(f.content)}catch(e){return null}
+}
+
+function setStatus(txt){
+  var el=document.getElementById('syncStatus');if(el)el.textContent=txt;
+}
 
 async function doLogin(){
   var pw1=document.getElementById('pw1').value;
@@ -374,36 +417,73 @@ async function doLogin(){
   var btn=document.getElementById('loginBtn');btn.textContent='...';btn.disabled=true;
 
   try{
-    var hasLocal=!!localStorage.getItem('fullcx_enc');
-    var meta=JSON.parse(localStorage.getItem('fullcx_meta')||'null');
+    // 1. Derive auth key using sync.enc.json salt (canonical across devices)
+    var syncResp=await fetch('sync.enc.json',{cache:'no-store'});
+    if(!syncResp.ok)throw new Error('sync config não encontrada');
+    var syncBlob=await syncResp.json();
+    _authKey=await deriveKey(pw1,b64d(syncBlob.salt),syncBlob.iters);
+    // Decrypt sync bundle (token + gistId)
+    var bundle;
+    try{
+      var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(syncBlob.iv)},_authKey,b64d(syncBlob.ct));
+      bundle=JSON.parse(new TextDecoder().decode(pt));
+    }catch(e){throw new Error('Senha incorreta')}
+    _sync.token=bundle.token;_sync.gistId=bundle.gist_id;
+    localStorage.setItem('fullcx_meta',JSON.stringify({salt:syncBlob.salt,iters:syncBlob.iters}));
 
-    if(hasLocal && meta){
-      // Returning user: derive key with stored salt, try decrypt
-      _authKey=await deriveKey(pw1,b64d(meta.salt),meta.iters);
-      try{state=await loadState()}catch(e){throw new Error('Senha incorreta')}
+    // 2. Try pull latest from cloud gist
+    var remote=null;
+    try{remote=await pullFromCloud()}catch(e){console.warn('pull fail, using local',e)}
+
+    if(remote && remote.ct){
+      // Decrypt remote state with same auth key
+      try{state=await decryptState(_authKey,remote)}catch(e){
+        // remote unreadable — try local
+        var loc=localStorage.getItem('fullcx_enc');
+        if(loc){try{state=await decryptState(_authKey,JSON.parse(loc))}catch(_){state={companies:[],selected:null}}}
+      }
     } else {
-      // First login on this device: try fetch and decrypt seed.enc.json
-      var resp=await fetch('seed.enc.json',{cache:'no-store'});
-      if(!resp.ok)throw new Error('seed não encontrado');
-      var seedBlob=await resp.json();
-      var salt=b64d(seedBlob.salt);
-      _authKey=await deriveKey(pw1,salt,seedBlob.iters);
-      try{
-        var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(seedBlob.iv)},_authKey,b64d(seedBlob.ct));
-        state=JSON.parse(new TextDecoder().decode(pt));
-      }catch(e){throw new Error('Senha incorreta')}
-      // Store meta (salt/iters) for subsequent saves on this device
-      localStorage.setItem('fullcx_meta',JSON.stringify({salt:seedBlob.salt,iters:seedBlob.iters}));
-      await saveState();
+      // No cloud data yet — try local, else seed
+      var loc2=localStorage.getItem('fullcx_enc');
+      if(loc2){
+        try{state=await decryptState(_authKey,JSON.parse(loc2))}catch(_){state={companies:[],selected:null}}
+      } else {
+        var seedResp=await fetch('seed.enc.json',{cache:'no-store'});
+        if(seedResp.ok){
+          var seedBlob=await seedResp.json();
+          var seedKey=await deriveKey(pw1,b64d(seedBlob.salt),seedBlob.iters);
+          try{
+            var pt2=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(seedBlob.iv)},seedKey,b64d(seedBlob.ct));
+            state=JSON.parse(new TextDecoder().decode(pt2));
+          }catch(e){state={companies:[],selected:null}}
+        }
+      }
     }
+
+    await saveState();
 
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='flex';
+    setStatus('sincronizado');
     render();
   }catch(e){
     errEl.textContent=e.message||'Erro ao entrar';
     btn.textContent='Entrar';btn.disabled=false;
   }
+}
+
+async function pullNow(){
+  if(!_authKey){return}
+  setStatus('puxando…');
+  try{
+    var remote=await pullFromCloud();
+    if(remote&&remote.ct){
+      state=await decryptState(_authKey,remote);
+      await saveState();
+      render();
+      setStatus('sincronizado');
+    } else { setStatus('sem dados remotos') }
+  }catch(e){setStatus('erro: '+e.message)}
 }
 
 function logout(){
