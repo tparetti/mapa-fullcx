@@ -47,12 +47,27 @@
   .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
   .layer.c .dot{background:var(--c)}.layer.d .dot{background:var(--d)}.layer.o .dot{background:var(--o)}
   .layer-sub{color:var(--muted);font-size:11px;margin-top:2px}
-  .contacts{padding:8px 12px}
-  .contact{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:10px 8px;border-bottom:1px dashed var(--line);align-items:center}
-  .contact:hover{background:var(--panel2)}
+  .contacts{padding:14px 16px}
+  .org-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+  .node{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:190px;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden}
+  .node:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,24,40,.08)}
+  .node.c{border-top:3px solid var(--c)}
+  .node.d{border-top:3px solid var(--d)}
+  .node.o{border-top:3px solid var(--o)}
+  .node .n-name{font-weight:700;font-size:13px;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node .n-role{font-size:11px;color:var(--muted);line-height:1.3;margin-bottom:6px;min-height:28px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .node .n-foot{display:flex;align-items:center;justify-content:space-between;gap:4px}
+  .node .n-chans{display:flex;gap:3px;font-size:11px;color:var(--muted)}
+  .node .n-chans span{cursor:default}
+  .node .status{font-size:9px;padding:2px 6px}
+  .node .n-acts{position:absolute;top:4px;right:4px;display:none;gap:2px;background:rgba(255,255,255,.95);border-radius:6px;padding:2px}
+  .node:hover .n-acts{display:flex}
+  .node .n-acts button{padding:3px 6px;font-size:11px;line-height:1;border:1px solid var(--line);background:#fff;border-radius:4px;cursor:pointer}
+  .node .n-acts button:hover{border-color:var(--acc);color:var(--acc)}
+  .node .n-acts button.del:hover{border-color:#dc2626;color:#dc2626}
+  .node.empty-node{background:var(--panel2);border:1px dashed var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;min-height:70px;font-size:12px;box-shadow:none}
+  .node.empty-node:hover{border-color:var(--acc);color:var(--acc);transform:none;box-shadow:none}
   .row-acts{display:flex;gap:4px}
-  .row-acts .btn.sm{padding:4px 8px}
-  .contact:last-child{border-bottom:none}
   .c-main{min-width:0}
   .c-name{font-weight:600}
   .c-role{color:var(--muted);font-size:12px}
@@ -453,28 +468,30 @@ function renderContent(){
       +'<div style="display:flex;gap:6px;align-items:center"><span class="tag">'+list.length+' contato(s)</span>'
       +'<button class="btn sm" onclick="openContactModal(\''+c.id+'\',null,\''+layer+'\')">+ Incluir</button>'
       +'</div></div>';
-    html+='<div class="contacts">';
-    if(list.length===0){html+='<div style="color:var(--muted);padding:14px;text-align:center;font-size:12px">Ainda nenhum contato nesta camada</div>'}
+    html+='<div class="contacts"><div class="org-grid">';
+    if(list.length===0){
+      html+='<div class="node empty-node" onclick="openContactModal(\''+c.id+'\',null,\''+layer+'\')">+ adicionar '+title+'</div>'
+    }
     list.forEach(function(ct){
       var chans=[];
-      if(ct.email)chans.push('<span class="tag on">✉ '+escapeHtml(ct.email)+'</span>');
-      if(ct.phone)chans.push('<span class="tag on">📱 '+escapeHtml(ct.phone)+'</span>');
-      if(ct.linkedin)chans.push('<a href="'+escapeHtml(ct.linkedin)+'" target="_blank" class="tag on" onclick="event.stopPropagation()">in</a>');
-      html+='<div class="contact">'
-        +'<div class="c-main" onclick="openContactModal(\''+c.id+'\',\''+ct.id+'\')" style="cursor:pointer">'
-        +'<div class="c-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
-        +'<div class="c-role">'+escapeHtml(ct.role||'')+'</div>'
-        +(chans.length?'<div class="c-chans">'+chans.join('')+'</div>':'')
-        +(ct.next?'<div class="interactions">▶ <b>'+escapeHtml(ct.next)+'</b></div>':'')
+      if(ct.email)chans.push('<span title="'+escapeHtml(ct.email)+'">✉</span>');
+      if(ct.phone)chans.push('<span title="'+escapeHtml(ct.phone)+'">📱</span>');
+      if(ct.linkedin)chans.push('<a href="'+escapeHtml(ct.linkedin)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;color:inherit" title="LinkedIn">in</a>');
+      if(ct.next)chans.push('<span title="'+escapeHtml(ct.next)+'">⏰</span>');
+      html+='<div class="node '+layer+'" onclick="openContactModal(\''+c.id+'\',\''+ct.id+'\')">'
+        +'<div class="n-acts">'
+        +'<button title="Editar" onclick="event.stopPropagation();openContactModal(\''+c.id+'\',\''+ct.id+'\')">✎</button>'
+        +'<button class="del" title="Excluir" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\',\''+ct.id+'\')">🗑</button>'
         +'</div>'
+        +'<div class="n-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
+        +'<div class="n-role">'+escapeHtml(ct.role||'—')+'</div>'
+        +'<div class="n-foot">'
         +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'
-        +'<div class="row-acts">'
-        +'<button class="btn sm" title="Editar" onclick="openContactModal(\''+c.id+'\',\''+ct.id+'\')">✎</button>'
-        +'<button class="btn sm danger" title="Excluir" onclick="quickDeleteContact(\''+c.id+'\',\''+ct.id+'\')">🗑</button>'
+        +(chans.length?'<div class="n-chans">'+chans.join('')+'</div>':'<span></span>')
         +'</div>'
         +'</div>'
     });
-    html+='</div></div>'
+    html+='</div></div></div>'
   });
 
   el.innerHTML=html;
