@@ -313,7 +313,10 @@ Qualquer coisa, é só responder. Abraço.</div>
         <option value="lost">Lost — fora</option>
       </select></div>
     </div>
-    <div class="field"><label>Próxima ação + data</label><input id="cn-next" type="text" placeholder="ex: Enviar e-mail 2 em 15/04"/></div>
+    <div class="field-row">
+      <div class="field"><label>Próxima ação</label><input id="cn-next" type="text" placeholder="ex: Enviar e-mail 2"/></div>
+      <div class="field"><label>Data</label><input id="cn-next-date" type="date"/></div>
+    </div>
     <div class="field"><label>Histórico de interações</label><textarea id="cn-history" placeholder="Uma por linha: 13/04 - LinkedIn connect aceito"></textarea></div>
     <div class="modal-actions">
       <button class="btn danger" id="cn-delete" style="display:none" onclick="deleteContact()">Excluir</button>
@@ -483,7 +486,9 @@ function renderContent(){
       if(ct.email)chans.push('<span title="'+escapeHtml(ct.email)+'">✉</span>');
       if(ct.phone)chans.push('<span title="'+escapeHtml(ct.phone)+'">📱</span>');
       if(ct.linkedin)chans.push('<a href="'+escapeHtml(ct.linkedin)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;color:inherit" title="LinkedIn">in</a>');
-      if(ct.next)chans.push('<span title="'+escapeHtml(ct.next)+'">⏰</span>');
+      var nextLabel=ct.next||'';
+      if(ct.nextDate){var dp=ct.nextDate.split('-');nextLabel+=(nextLabel?' · ':'')+dp[2]+'/'+dp[1]}
+      if(nextLabel)chans.push('<span title="'+escapeHtml(nextLabel)+'">⏰</span>');
       html+='<div class="node '+layer+'" draggable="true" data-id="'+ct.id+'" data-layer="'+layer+'" '
         +'ondragstart="onNodeDragStart(event,\''+ct.id+'\',\''+layer+'\')" '
         +'ondragend="onNodeDragEnd(event)" '
@@ -561,7 +566,7 @@ function openContactModal(companyId,contactId,defaultLayer){
   editingCompany=companyId;
   editingContact=contactId||null;
   var c=state.companies.find(function(x){return x.id===companyId});
-  var ct=contactId?c.contacts.find(function(x){return x.id===contactId}):{name:'',layer:defaultLayer||'d',role:'',email:'',phone:'',linkedin:'',status:'cold',next:'',history:''};
+  var ct=contactId?c.contacts.find(function(x){return x.id===contactId}):{name:'',layer:defaultLayer||'d',role:'',email:'',phone:'',linkedin:'',status:'cold',next:'',nextDate:'',history:''};
   document.getElementById('cn-title').textContent=contactId?'Editar Contato — '+c.name:'Novo Contato — '+c.name;
   document.getElementById('cn-name').value=ct.name||'';
   document.getElementById('cn-layer').value=ct.layer||'d';
@@ -571,6 +576,7 @@ function openContactModal(companyId,contactId,defaultLayer){
   document.getElementById('cn-linkedin').value=ct.linkedin||'';
   document.getElementById('cn-status').value=ct.status||'cold';
   document.getElementById('cn-next').value=ct.next||'';
+  document.getElementById('cn-next-date').value=ct.nextDate||'';
   document.getElementById('cn-history').value=ct.history||'';
   document.getElementById('cn-delete').style.display=contactId?'inline-block':'none';
   document.getElementById('contactModal').classList.add('open');
@@ -588,6 +594,7 @@ function saveContact(){
     linkedin:document.getElementById('cn-linkedin').value.trim(),
     status:document.getElementById('cn-status').value,
     next:document.getElementById('cn-next').value.trim(),
+    nextDate:document.getElementById('cn-next-date').value,
     history:document.getElementById('cn-history').value
   };
   if(!data.name){alert('Nome obrigatório');return}
