@@ -423,12 +423,11 @@ async function doLogin(){
   var btn=document.getElementById('loginBtn');btn.textContent='...';btn.disabled=true;
 
   try{
-    // 1. Derive auth key using sync.enc.json salt (canonical across devices)
+    // 1. Derive auth key using sync.enc.json salt (unified across seed/sync/state)
     var syncResp=await fetch('sync.enc.json',{cache:'no-store'});
     if(!syncResp.ok)throw new Error('sync config não encontrada');
     var syncBlob=await syncResp.json();
     _authKey=await deriveKey(pw1,b64d(syncBlob.salt),syncBlob.iters);
-    // Decrypt sync bundle (token + gistId)
     var bundle;
     try{
       var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(syncBlob.iv)},_authKey,b64d(syncBlob.ct));
@@ -437,40 +436,43 @@ async function doLogin(){
     _sync.token=bundle.token;_sync.gistId=bundle.gist_id;
     localStorage.setItem('fullcx_meta',JSON.stringify({salt:syncBlob.salt,iters:syncBlob.iters}));
 
-    // 2. Try pull latest from cloud gist
-    var remote=null;
-    try{remote=await pullFromCloud()}catch(e){console.warn('pull fail, using local',e)}
+    // 2. Gather candidates: cloud, local (current meta), local (legacy metas we've seen)
+    var candidates=[];
+    try{
+      var remote=await pullFromCloud();
+      if(remote&&remote.ct)candidates.push({src:'cloud',blob:remote});
+    }catch(e){console.warn('pull fail',e)}
+    var loc=localStorage.getItem('fullcx_enc');
+    if(loc){try{candidates.push({src:'local',blob:JSON.parse(loc)})}catch(_){}}
+    try{
+      var seedResp=await fetch('seed.enc.json',{cache:'no-store'});
+      if(seedResp.ok)candidates.push({src:'seed',blob:await seedResp.json()});
+    }catch(_){}
 
-    if(remote && remote.ct){
-      // Decrypt remote state with same auth key
-      try{state=await decryptState(_authKey,remote)}catch(e){
-        // remote unreadable — try local
-        var loc=localStorage.getItem('fullcx_enc');
-        if(loc){try{state=await decryptState(_authKey,JSON.parse(loc))}catch(_){state={companies:[],selected:null}}}
-      }
-    } else {
-      // No cloud data yet — try local, else seed
-      var loc2=localStorage.getItem('fullcx_enc');
-      if(loc2){
-        try{state=await decryptState(_authKey,JSON.parse(loc2))}catch(_){state={companies:[],selected:null}}
-      } else {
-        var seedResp=await fetch('seed.enc.json',{cache:'no-store'});
-        if(seedResp.ok){
-          var seedBlob=await seedResp.json();
-          var seedKey=await deriveKey(pw1,b64d(seedBlob.salt),seedBlob.iters);
-          try{
-            var pt2=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(seedBlob.iv)},seedKey,b64d(seedBlob.ct));
-            state=JSON.parse(new TextDecoder().decode(pt2));
-          }catch(e){state={companies:[],selected:null}}
-        }
-      }
+    // Try to decrypt each; pick the one with most companies
+    var best=null;
+    for(var i=0;i<candidates.length;i++){
+      try{
+        var s=await decryptState(_authKey,candidates[i].blob);
+        var count=(s&&s.companies)?s.companies.length:0;
+        if(!best||count>best.count){best={src:candidates[i].src,state:s,count:count}}
+      }catch(e){console.warn('decrypt fail',candidates[i].src,e)}
     }
 
-    await saveState();
+    if(!best){throw new Error('Não consegui decriptar — verifique a senha')}
+    if(best.count===0){
+      if(!confirm('Só encontrei estado vazio. Entrar assim mesmo? (clica Cancelar pra abortar sem sobrescrever)')){
+        throw new Error('abortado');
+      }
+    }
+    state=best.state;
+
+    // Only save/push if state is non-empty OR cloud already had non-empty (safe)
+    if(best.count>0){await saveState()}
 
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='flex';
-    setStatus('sincronizado');
+    setStatus('carregado de '+best.src+' ('+best.count+' empresas)');
     render();
   }catch(e){
     errEl.textContent=e.message||'Erro ao entrar';
