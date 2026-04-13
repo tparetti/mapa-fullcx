@@ -469,9 +469,8 @@ function renderContent(){
 
   ['c','d','o'].forEach(function(layer){
     var title={c:'C-Level',d:'Diretoria',o:'Operação'}[layer];
-    var sub={c:'Sponsor executivo — ROI, saving, visibilidade',d:'Champion — budget de CX, jornadas, digitalização',o:'Validador técnico — TMA, FCR, integração'}[layer];
     var list=c.contacts.filter(function(x){return x.layer===layer});
-    html+='<div class="layer '+layer+'"><div class="layer-head"><div><h3><span class="dot"></span>'+title+'</h3><div class="layer-sub">'+sub+'</div></div>'
+    html+='<div class="layer '+layer+'"><div class="layer-head"><div><h3><span class="dot"></span>'+title+'</h3></div>'
       +'<div style="display:flex;gap:6px;align-items:center"><span class="tag">'+list.length+' contato(s)</span>'
       +'<button class="btn sm" onclick="openContactModal(\''+c.id+'\',null,\''+layer+'\')">+ Incluir</button>'
       +'</div></div>';
