@@ -49,6 +49,9 @@
   .layer-sub{color:var(--muted);font-size:11px;margin-top:2px}
   .contacts{padding:8px 12px}
   .contact{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:10px 8px;border-bottom:1px dashed var(--line);align-items:center}
+  .contact:hover{background:var(--panel2)}
+  .row-acts{display:flex;gap:4px}
+  .row-acts .btn.sm{padding:4px 8px}
   .contact:last-child{border-bottom:none}
   .c-main{min-width:0}
   .c-name{font-weight:600}
@@ -446,21 +449,29 @@ function renderContent(){
     var title={c:'C-Level',d:'Diretoria',o:'Operação'}[layer];
     var sub={c:'Sponsor executivo — ROI, saving, visibilidade',d:'Champion — budget de CX, jornadas, digitalização',o:'Validador técnico — TMA, FCR, integração'}[layer];
     var list=c.contacts.filter(function(x){return x.layer===layer});
-    html+='<div class="layer '+layer+'"><div class="layer-head"><div><h3><span class="dot"></span>'+title+'</h3><div class="layer-sub">'+sub+'</div></div><span class="tag">'+list.length+' contato(s)</span></div>';
+    html+='<div class="layer '+layer+'"><div class="layer-head"><div><h3><span class="dot"></span>'+title+'</h3><div class="layer-sub">'+sub+'</div></div>'
+      +'<div style="display:flex;gap:6px;align-items:center"><span class="tag">'+list.length+' contato(s)</span>'
+      +'<button class="btn sm" onclick="openContactModal(\''+c.id+'\',null,\''+layer+'\')">+ Incluir</button>'
+      +'</div></div>';
     html+='<div class="contacts">';
     if(list.length===0){html+='<div style="color:var(--muted);padding:14px;text-align:center;font-size:12px">Ainda nenhum contato nesta camada</div>'}
     list.forEach(function(ct){
       var chans=[];
-      if(ct.email)chans.push('<span class="tag on">✉ email</span>');
+      if(ct.email)chans.push('<span class="tag on">✉ '+escapeHtml(ct.email)+'</span>');
       if(ct.phone)chans.push('<span class="tag on">📱 '+escapeHtml(ct.phone)+'</span>');
-      if(ct.linkedin)chans.push('<a href="'+escapeHtml(ct.linkedin)+'" target="_blank" class="tag on">in</a>');
-      html+='<div class="contact" onclick="openContactModal(\''+c.id+'\',\''+ct.id+'\')" style="cursor:pointer">'
-        +'<div class="c-main"><div class="c-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
+      if(ct.linkedin)chans.push('<a href="'+escapeHtml(ct.linkedin)+'" target="_blank" class="tag on" onclick="event.stopPropagation()">in</a>');
+      html+='<div class="contact">'
+        +'<div class="c-main" onclick="openContactModal(\''+c.id+'\',\''+ct.id+'\')" style="cursor:pointer">'
+        +'<div class="c-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
         +'<div class="c-role">'+escapeHtml(ct.role||'')+'</div>'
         +(chans.length?'<div class="c-chans">'+chans.join('')+'</div>':'')
         +(ct.next?'<div class="interactions">▶ <b>'+escapeHtml(ct.next)+'</b></div>':'')
         +'</div>'
         +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'
+        +'<div class="row-acts">'
+        +'<button class="btn sm" title="Editar" onclick="openContactModal(\''+c.id+'\',\''+ct.id+'\')">✎</button>'
+        +'<button class="btn sm danger" title="Excluir" onclick="quickDeleteContact(\''+c.id+'\',\''+ct.id+'\')">🗑</button>'
+        +'</div>'
         +'</div>'
     });
     html+='</div></div>'
@@ -516,11 +527,11 @@ function deleteCompany(){
   save();render();closeModal('companyModal');
 }
 
-function openContactModal(companyId,contactId){
+function openContactModal(companyId,contactId,defaultLayer){
   editingCompany=companyId;
   editingContact=contactId||null;
   var c=state.companies.find(function(x){return x.id===companyId});
-  var ct=contactId?c.contacts.find(function(x){return x.id===contactId}):{name:'',layer:'d',role:'',email:'',phone:'',linkedin:'',status:'cold',next:'',history:''};
+  var ct=contactId?c.contacts.find(function(x){return x.id===contactId}):{name:'',layer:defaultLayer||'d',role:'',email:'',phone:'',linkedin:'',status:'cold',next:'',history:''};
   document.getElementById('cn-title').textContent=contactId?'Editar Contato — '+c.name:'Novo Contato — '+c.name;
   document.getElementById('cn-name').value=ct.name||'';
   document.getElementById('cn-layer').value=ct.layer||'d';
@@ -565,6 +576,14 @@ function deleteContact(){
   var c=state.companies.find(function(x){return x.id===editingCompany});
   c.contacts=c.contacts.filter(function(x){return x.id!==editingContact});
   save();render();closeModal('contactModal');
+}
+
+function quickDeleteContact(companyId,contactId){
+  var c=state.companies.find(function(x){return x.id===companyId});
+  var ct=c.contacts.find(function(x){return x.id===contactId});
+  if(!confirm('Excluir "'+(ct.name||'contato')+'"?'))return;
+  c.contacts=c.contacts.filter(function(x){return x.id!==contactId});
+  save();render();
 }
 
 function closeModal(id){document.getElementById(id).classList.remove('open')}
