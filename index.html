@@ -50,8 +50,10 @@
   .contacts{padding:14px 16px}
   .org-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;min-height:80px;padding:4px;border-radius:8px;transition:background .15s}
   .org-grid.drop-target{background:rgba(255,107,53,.08);outline:2px dashed var(--acc);outline-offset:-2px}
-  .node{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:190px;cursor:grab;transition:.15s;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden}
-  .node:active{cursor:grabbing}
+  .node{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 24px;width:190px;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden}
+  .drag-handle{position:absolute;left:0;top:0;bottom:0;width:18px;display:flex;align-items:center;justify-content:center;cursor:grab;color:#cbd5e1;font-size:14px;user-select:none;background:var(--panel2);border-right:1px solid var(--line)}
+  .drag-handle:hover{color:var(--acc);background:#fff7ed}
+  .drag-handle:active{cursor:grabbing}
   .node.dragging{opacity:.4}
   .node.drop-before{box-shadow:-3px 0 0 var(--acc)}
   .node.drop-after{box-shadow:3px 0 0 var(--acc)}
@@ -490,6 +492,7 @@ function renderContent(){
         +'ondragleave="onNodeLeave(event)" '
         +'ondrop="onNodeDrop(event,\''+ct.id+'\',\''+layer+'\')" '
         +'onclick="openContactModal(\''+c.id+'\',\''+ct.id+'\')">'
+        +'<div class="drag-handle" title="Arraste pra mover">⋮⋮</div>'
         +'<div class="n-acts">'
         +'<button title="Editar" onclick="event.stopPropagation();openContactModal(\''+c.id+'\',\''+ct.id+'\')">✎</button>'
         +'<button class="del" title="Excluir" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\',\''+ct.id+'\')">🗑</button>'
