@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mapa de Relacionamento — Full CX Mutant</title>
+<style>
+  :root{
+    --bg:#f7f8fb; --panel:#ffffff; --panel2:#f1f3f7; --panel3:#e8ecf2;
+    --ink:#1a2233; --muted:#667085; --acc:#ff6b35; --acc2:#ff8a5c; --line:#e4e7ee;
+    --c:#dc2626; --d:#d97706; --o:#059669;
+    --cold:#64748b; --warm:#d97706; --hot:#ff6b35; --booked:#2563eb; --won:#059669; --lost:#dc2626;
+  }
+  *{box-sizing:border-box}html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Display","Inter",sans-serif;display:flex;flex-direction:column;min-height:100vh}
+  header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:rgba(255,255,255,.85);backdrop-filter:blur(8px);position:sticky;top:0;z-index:20;gap:12px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  header h1{margin:0;font-size:17px;letter-spacing:.2px}
+  header h1 small{color:var(--muted);font-weight:400;margin-left:8px;font-size:12px}
+  .hdr-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{background:#fff;border:1px solid var(--line);color:var(--ink);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:.15s}
+  .btn:hover{border-color:var(--acc);color:var(--acc)}
+  .btn.primary{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-color:transparent;font-weight:700}
+  .btn.primary:hover{filter:brightness(1.05);color:#fff}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .btn.ghost{background:transparent}
+  .btn.danger{color:#dc2626}.btn.danger:hover{border-color:#dc2626}
+  main{flex:1;display:grid;grid-template-columns:280px 1fr 360px;gap:0;min-height:0}
+  @media(max-width:1100px){main{grid-template-columns:240px 1fr}.playbook{display:none}}
+  @media(max-width:700px){main{grid-template-columns:1fr}.sidebar{display:none}}
+  .sidebar{border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:12px}
+  .sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:10px 8px 8px}
+  .company-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .company-item:hover{background:var(--panel2)}
+  .company-item.active{background:var(--panel3);border-color:var(--acc)}
+  .company-item .ci-name{font-weight:600;font-size:13px}
+  .company-item .ci-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .content{overflow:auto;padding:18px 22px}
+  .company-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+  .company-header h2{margin:0;font-size:22px}
+  .company-meta{color:var(--muted);font-size:12px;margin-top:4px}
+  .kpis{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px}
+  .kpi b{color:var(--acc);font-size:14px;margin-right:4px}
+  .layer{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 3px rgba(16,24,40,.04)}
+  .layer-head{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--panel2)}
+  .layer-head h3{margin:0;font-size:14px;display:flex;align-items:center;gap:8px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .layer.c .dot{background:var(--c)}.layer.d .dot{background:var(--d)}.layer.o .dot{background:var(--o)}
+  .layer-sub{color:var(--muted);font-size:11px;margin-top:2px}
+  .contacts{padding:8px 12px}
+  .contact{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:10px 8px;border-bottom:1px dashed var(--line);align-items:center}
+  .contact:last-child{border-bottom:none}
+  .c-main{min-width:0}
+  .c-name{font-weight:600}
+  .c-role{color:var(--muted);font-size:12px}
+  .c-chans{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .tag{font-size:10px;padding:2px 7px;border-radius:10px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+  .tag.on{color:var(--ink);background:#fff}
+  .status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px}
+  .st-cold{background:#eef1f5;color:var(--cold)}
+  .st-warm{background:#fef3c7;color:#92400e}
+  .st-hot{background:#fee4d6;color:#c2410c}
+  .st-booked{background:#dbeafe;color:#1e40af}
+  .st-won{background:#d1fae5;color:#065f46}
+  .st-lost{background:#fee2e2;color:#991b1b}
+  .playbook{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:14px}
+  .playbook h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:0 0 8px}
+  .pb-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;font-size:12.5px}
+  .pb-card h4{margin:0 0 6px;font-size:13px;display:flex;align-items:center;gap:6px}
+  .pb-card ul{margin:4px 0 0;padding-left:18px}
+  .pb-card li{margin-bottom:3px}
+  .pb-card .ex{background:var(--panel2);border-left:3px solid var(--acc);padding:8px 10px;border-radius:4px;margin-top:6px;font-size:11.5px;color:#334155;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .toggle{cursor:pointer;user-select:none}
+  .modal{position:fixed;inset:0;background:rgba(16,24,40,.5);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal.open{display:flex}
+  .modal-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;width:min(520px,95vw);max-height:90vh;overflow:auto;box-shadow:0 20px 40px rgba(16,24,40,.15)}
+  .modal-box h3{margin:0 0 14px}
+  .field{margin-bottom:10px}
+  .field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .field input,.field select,.field textarea{width:100%;background:#fff;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:6px;font-size:13px;font-family:inherit}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(255,107,53,.15)}
+  .field textarea{resize:vertical;min-height:60px}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .modal-actions{display:flex;justify-content:space-between;gap:8px;margin-top:14px}
+  .empty{text-align:center;padding:40px 20px;color:var(--muted)}
+  .empty h2{color:var(--ink);margin-bottom:8px}
+  .interactions{margin-top:6px;font-size:11.5px;color:var(--muted)}
+  .interactions b{color:var(--ink);font-weight:500}
+  .cadence-step{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
+  .cadence-step .day{background:var(--acc);color:#fff;font-weight:700;border-radius:4px;padding:1px 6px;font-size:10px;min-width:30px;text-align:center}
+  .tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+  .tab{padding:8px 14px;cursor:pointer;font-size:12px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab.active{color:var(--ink);border-color:var(--acc)}
+  .approach-box{background:linear-gradient(135deg,#fff7ed,#fff);border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;color:#431407}
+  .approach-box b{color:#c2410c}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Mapa de Relacionamento <small>Full CX Mutant · Estratégia Enterprise</small></h1>
+  </div>
+  <div class="hdr-actions">
+    <button class="btn sm" onclick="openCompanyModal()">+ Empresa</button>
+    <button class="btn sm ghost" onclick="exportData()">Exportar</button>
+    <button class="btn sm ghost" onclick="importData()">Importar</button>
+  </div>
+</header>
+
+<main>
+  <aside class="sidebar">
+    <h3>Empresas Alvo</h3>
+    <div id="companyList"></div>
+  </aside>
+
+  <section class="content" id="content"></section>
+
+  <aside class="playbook">
+    <div class="tabs">
+      <div class="tab active" data-tab="play" onclick="setTab('play')">Playbook</div>
+      <div class="tab" data-tab="cadence" onclick="setTab('cadence')">Cadência</div>
+      <div class="tab" data-tab="msgs" onclick="setTab('msgs')">Mensagens</div>
+    </div>
+    <div id="tab-play">
+      <div class="approach-box"><b>Ângulo central:</b> Full CX Mutant = orquestração voz + digital + humano com IA Generativa (IAM), pricing win-win por outcome (não headcount). Cases provam −17% budget, +31pp FCR, 85% resolutividade.</div>
+
+      <div class="pb-card">
+        <h4><span class="dot" style="background:var(--c)"></span>C-Level — CEO/CFO/COO</h4>
+        <b>Objetivo:</b> sponsor executivo e endosso estratégico.<br>
+        <b>Dor a acionar:</b> previsibilidade de custo, visibilidade end-to-end, ROI sobre IA.<br>
+        <ul>
+          <li>Narrativa de <b>business outcome</b> (saving, retenção, NPS)</li>
+          <li>Benchmarks de mercado (Certisign, C&A Pay, Banco Pan)</li>
+          <li>Conversa curta (25 min) com case 1:1 setor</li>
+        </ul>
+      </div>
+
+      <div class="pb-card">
+        <h4><span class="dot" style="background:var(--d)"></span>Diretoria — CX/Ops/TI/CCO</h4>
+        <b>Objetivo:</b> champion operacional e dono do budget de CX.<br>
+        <b>Dor a acionar:</b> fragmentação de canais, rechamadas, dependência de headcount.<br>
+        <ul>
+          <li>Demo IAM + arquitetura unificada (slide 7 e 8)</li>
+          <li>Workshop de jornada (voz + digital)</li>
+          <li>Proposta de POC/MVP em 30-60 dias</li>
+        </ul>
+      </div>
+
+      <div class="pb-card">
+        <h4><span class="dot" style="background:var(--o)"></span>Operação — Gerentes/Coords/Analistas</h4>
+        <b>Objetivo:</b> validadores técnicos e detratores silenciosos convertidos em aliados.<br>
+        <b>Dor a acionar:</b> TMA alto, falta de contexto na transferência, SLA apertado.<br>
+        <ul>
+          <li>Hands-on com demos (+55 11 5039-6837 etc)</li>
+          <li>Troca técnica sobre integração com CRM/CCaaS atual</li>
+          <li>Visita ao Barra Funda (infra Mutant)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="tab-cadence" style="display:none">
+      <div class="pb-card">
+        <h4>Cadência padrão — 21 dias</h4>
+        <div class="cadence-step"><span class="day">D1</span><div><b>LinkedIn connect</b> — nota curta, referência a case do setor, sem pitch</div></div>
+        <div class="cadence-step"><span class="day">D2</span><div><b>E-mail 1</b> — provocação com 1 dado de benchmark + pergunta aberta</div></div>
+        <div class="cadence-step"><span class="day">D5</span><div><b>WhatsApp</b> (se tiver celular) — áudio de 40s pessoal</div></div>
+        <div class="cadence-step"><span class="day">D8</span><div><b>E-mail 2</b> — link demo IAM (telefone) + 1 case PDF anexo</div></div>
+        <div class="cadence-step"><span class="day">D12</span><div><b>LinkedIn post/comment</b> — engajar em conteúdo do contato</div></div>
+        <div class="cadence-step"><span class="day">D15</span><div><b>E-mail 3</b> — "checking in" com 3 bullets de valor + proposta de 25min</div></div>
+        <div class="cadence-step"><span class="day">D18</span><div><b>Ligação</b> — celular ou ramal, script curto, objetivo: agenda</div></div>
+        <div class="cadence-step"><span class="day">D21</span><div><b>E-mail break-up</b> — "fecho o loop", gatilho escassez/FOMO</div></div>
+      </div>
+      <div class="pb-card">
+        <h4>Regras</h4>
+        <ul>
+          <li>Nunca 2 canais no mesmo dia</li>
+          <li>C-level: menos frequência, mais densidade (executive brief PDF)</li>
+          <li>Operação: mais volume, mais técnico</li>
+          <li>Se respondeu: sai da cadência automática, entra em nurturing 1:1</li>
+          <li>Registrar toda interação no card do contato</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="tab-msgs" style="display:none">
+      <div class="pb-card">
+        <h4>LinkedIn connect (C-level)</h4>
+        <div class="ex">Olá [Nome], Head of Sales na Mutant. Acabamos de rodar um projeto de Full CX com a [Case do setor] que cortou −17% do budget de atendimento e subiu FCR em 31pp. Quero trocar uma ideia sobre o que estamos vendo no setor de [segmento]. Conecta?</div>
+      </div>
+      <div class="pb-card">
+        <h4>E-mail 1 (Diretoria CX)</h4>
+        <div class="ex">Assunto: 67% de digitalização em voz na [setor] — [Empresa]?
+
+[Nome], tudo bem?
+
+A C&A Pay saiu de URA tradicional pra 67% de digitalização em voz em 60 dias, com IAM (IA Generativa) no topo da URA. Custo de atendimento caiu 18%.
+
+Vendo o volume de atendimento da [Empresa], aposto que tem espaço parecido. Topa 25min pra eu te mostrar a arquitetura?
+
+Thiago Paretti — Head of Sales, Mutant</div>
+      </div>
+      <div class="pb-card">
+        <h4>WhatsApp áudio (Operação)</h4>
+        <div class="ex">Fala [Nome], Thiago da Mutant. Peguei seu contato via [fonte]. Rápido: a gente tem 4 demos em telefone pra você testar IA Gen na prática (Nubank, Enel, Mutant Educa, Banco Pan). Manda um OK que te passo os números. 40 segundos do seu tempo.</div>
+      </div>
+      <div class="pb-card">
+        <h4>Break-up e-mail (D21)</h4>
+        <div class="ex">[Nome], fechando o loop aqui. Imagino que não seja prioridade agora — tudo bem. Deixo 2 coisas caso mudem de cenário:
+
+1. Case YDUQS (retenção): +15% saving em 3 meses
+2. Demo ao vivo do IAM: +55 11 5039-6837
+
+Qualquer coisa, é só responder. Abraço.</div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="modal" id="companyModal">
+  <div class="modal-box">
+    <h3 id="cm-title">Nova Empresa</h3>
+    <div class="field"><label>Nome</label><input id="cm-name" type="text"/></div>
+    <div class="field-row">
+      <div class="field"><label>Setor</label><select id="cm-sector"><option>Financeiro</option><option>Telecom</option><option>Varejo</option><option>Serviços</option><option>Educação</option><option>Saúde</option><option>Utilities</option><option>Outros</option></select></div>
+      <div class="field"><label>Tier</label><select id="cm-tier"><option>A — Quente</option><option>B — Priorizar</option><option>C — Nurturing</option></select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Deal value (R$)</label><input id="cm-value" type="text" placeholder="ex: 5.000.000"/></div>
+      <div class="field"><label>Iniciativa</label><select id="cm-init"><option>Kairos 2026</option><option>Phoenix 2026</option><option>LatAm</option><option>—</option></select></div>
+    </div>
+    <div class="field"><label>Notas</label><textarea id="cm-notes" placeholder="Contexto, produto atual, trigger event..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn danger" id="cm-delete" style="display:none" onclick="deleteCompany()">Excluir</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn ghost" onclick="closeModal('companyModal')">Cancelar</button>
+        <button class="btn primary" onclick="saveCompany()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="contactModal">
+  <div class="modal-box">
+    <h3 id="cn-title">Novo Contato</h3>
+    <div class="field-row">
+      <div class="field"><label>Nome</label><input id="cn-name" type="text"/></div>
+      <div class="field"><label>Camada</label><select id="cn-layer"><option value="c">C-Level</option><option value="d">Diretoria</option><option value="o">Operação</option></select></div>
+    </div>
+    <div class="field"><label>Cargo</label><input id="cn-role" type="text" placeholder="ex: Diretor de CX"/></div>
+    <div class="field-row">
+      <div class="field"><label>E-mail</label><input id="cn-email" type="text"/></div>
+      <div class="field"><label>Celular</label><input id="cn-phone" type="text"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>LinkedIn</label><input id="cn-linkedin" type="text"/></div>
+      <div class="field"><label>Status</label><select id="cn-status">
+        <option value="cold">Cold — não tocado</option>
+        <option value="warm">Warm — connectado</option>
+        <option value="hot">Hot — conversando</option>
+        <option value="booked">Booked — reunião agendada</option>
+        <option value="won">Won — aliado</option>
+        <option value="lost">Lost — fora</option>
+      </select></div>
+    </div>
+    <div class="field"><label>Próxima ação + data</label><input id="cn-next" type="text" placeholder="ex: Enviar e-mail 2 em 15/04"/></div>
+    <div class="field"><label>Histórico de interações</label><textarea id="cn-history" placeholder="Uma por linha: 13/04 - LinkedIn connect aceito"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn danger" id="cn-delete" style="display:none" onclick="deleteContact()">Excluir</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn ghost" onclick="closeModal('contactModal')">Cancelar</button>
+        <button class="btn primary" onclick="saveContact()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var state={companies:[],selected:null};
+var editingCompany=null, editingContact=null;
+
+function uid(){return Date.now()+'-'+Math.random().toString(36).slice(2,7)}
+function load(){try{var s=localStorage.getItem('fullcx_map');if(s){state=JSON.parse(s)}}catch(e){}}
+function save(){localStorage.setItem('fullcx_map',JSON.stringify(state))}
+
+function seed(){
+  if(state.companies.length>0)return;
+  state.companies=[{
+    id:uid(),name:"Exemplo — Edite ou exclua",sector:"Financeiro",tier:"A — Quente",
+    value:"5.000.000",init:"Kairos 2026",notes:"Trigger: RFP de WhatsApp em aberto.",
+    contacts:[
+      {id:uid(),layer:"c",name:"Nome do CEO",role:"CEO",email:"",phone:"",linkedin:"",status:"cold",next:"",history:""},
+      {id:uid(),layer:"d",name:"Diretor de CX",role:"Diretor de Atendimento",email:"",phone:"",linkedin:"",status:"cold",next:"",history:""},
+      {id:uid(),layer:"o",name:"Gerente de Ops",role:"Gerente de Operação",email:"",phone:"",linkedin:"",status:"cold",next:"",history:""}
+    ]
+  }];
+  state.selected=state.companies[0].id;save();
+}
+
+function renderSidebar(){
+  var el=document.getElementById('companyList');
+  if(state.companies.length===0){el.innerHTML='<div style="color:var(--muted);padding:12px;font-size:12px">Nenhuma empresa. Clique em + Empresa.</div>';return}
+  el.innerHTML=state.companies.map(function(c){
+    var nc=c.contacts.length;
+    var hot=c.contacts.filter(function(x){return x.status==='hot'||x.status==='booked'}).length;
+    return '<div class="company-item '+(c.id===state.selected?'active':'')+'" onclick="selectCompany(\''+c.id+'\')">'
+      +'<div><div class="ci-name">'+escapeHtml(c.name)+'</div><div class="ci-sub">'+escapeHtml(c.sector||'')+' · '+nc+' contatos'+(hot?' · 🔥'+hot:'')+'</div></div>'
+      +'</div>'
+  }).join('');
+}
+
+function renderContent(){
+  var el=document.getElementById('content');
+  var c=state.companies.find(function(x){return x.id===state.selected});
+  if(!c){el.innerHTML='<div class="empty"><h2>Selecione ou adicione uma empresa</h2><p>Clique em + Empresa no topo pra começar.</p></div>';return}
+
+  var total=c.contacts.length;
+  var byStatus=c.contacts.reduce(function(acc,x){acc[x.status]=(acc[x.status]||0)+1;return acc},{});
+  var coverage={c:0,d:0,o:0};
+  c.contacts.forEach(function(x){coverage[x.layer]++});
+
+  var html='<div class="company-header">'
+    +'<div><h2>'+escapeHtml(c.name)+' <button class="btn sm ghost" onclick="openCompanyModal(\''+c.id+'\')">editar</button></h2>'
+    +'<div class="company-meta">'+escapeHtml(c.sector||'')+' · '+escapeHtml(c.tier||'')+(c.value?' · R$ '+escapeHtml(c.value):'')+(c.init?' · '+escapeHtml(c.init):'')+'</div></div>'
+    +'<button class="btn primary" onclick="openContactModal(\''+c.id+'\')">+ Contato</button>'
+    +'</div>';
+
+  if(c.notes)html+='<div class="approach-box" style="margin-bottom:14px">'+escapeHtml(c.notes).replace(/\n/g,'<br>')+'</div>';
+
+  html+='<div class="kpis">'
+    +'<div class="kpi"><b>'+total+'</b>contatos</div>'
+    +'<div class="kpi"><b>'+coverage.c+'</b>C-Level</div>'
+    +'<div class="kpi"><b>'+coverage.d+'</b>Diretoria</div>'
+    +'<div class="kpi"><b>'+coverage.o+'</b>Operação</div>'
+    +'<div class="kpi"><b>'+(byStatus.hot||0)+'</b>hot</div>'
+    +'<div class="kpi"><b>'+(byStatus.booked||0)+'</b>agendados</div>'
+    +'</div>';
+
+  ['c','d','o'].forEach(function(layer){
+    var title={c:'C-Level',d:'Diretoria',o:'Operação'}[layer];
+    var sub={c:'Sponsor executivo — ROI, saving, visibilidade',d:'Champion — budget de CX, jornadas, digitalização',o:'Validador técnico — TMA, FCR, integração'}[layer];
+    var list=c.contacts.filter(function(x){return x.layer===layer});
+    html+='<div class="layer '+layer+'"><div class="layer-head"><div><h3><span class="dot"></span>'+title+'</h3><div class="layer-sub">'+sub+'</div></div><span class="tag">'+list.length+' contato(s)</span></div>';
+    html+='<div class="contacts">';
+    if(list.length===0){html+='<div style="color:var(--muted);padding:14px;text-align:center;font-size:12px">Ainda nenhum contato nesta camada</div>'}
+    list.forEach(function(ct){
+      var chans=[];
+      if(ct.email)chans.push('<span class="tag on">✉ email</span>');
+      if(ct.phone)chans.push('<span class="tag on">📱 '+escapeHtml(ct.phone)+'</span>');
+      if(ct.linkedin)chans.push('<a href="'+escapeHtml(ct.linkedin)+'" target="_blank" class="tag on">in</a>');
+      html+='<div class="contact" onclick="openContactModal(\''+c.id+'\',\''+ct.id+'\')" style="cursor:pointer">'
+        +'<div class="c-main"><div class="c-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
+        +'<div class="c-role">'+escapeHtml(ct.role||'')+'</div>'
+        +(chans.length?'<div class="c-chans">'+chans.join('')+'</div>':'')
+        +(ct.next?'<div class="interactions">▶ <b>'+escapeHtml(ct.next)+'</b></div>':'')
+        +'</div>'
+        +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'
+        +'</div>'
+    });
+    html+='</div></div>'
+  });
+
+  el.innerHTML=html;
+}
+
+function render(){renderSidebar();renderContent()}
+
+function selectCompany(id){state.selected=id;save();render()}
+
+function openCompanyModal(id){
+  editingCompany=id||null;
+  var c=id?state.companies.find(function(x){return x.id===id}):{name:'',sector:'Financeiro',tier:'A — Quente',value:'',init:'Kairos 2026',notes:''};
+  document.getElementById('cm-title').textContent=id?'Editar Empresa':'Nova Empresa';
+  document.getElementById('cm-name').value=c.name||'';
+  document.getElementById('cm-sector').value=c.sector||'Financeiro';
+  document.getElementById('cm-tier').value=c.tier||'A — Quente';
+  document.getElementById('cm-value').value=c.value||'';
+  document.getElementById('cm-init').value=c.init||'Kairos 2026';
+  document.getElementById('cm-notes').value=c.notes||'';
+  document.getElementById('cm-delete').style.display=id?'inline-block':'none';
+  document.getElementById('companyModal').classList.add('open');
+}
+
+function saveCompany(){
+  var data={
+    name:document.getElementById('cm-name').value.trim(),
+    sector:document.getElementById('cm-sector').value,
+    tier:document.getElementById('cm-tier').value,
+    value:document.getElementById('cm-value').value.trim(),
+    init:document.getElementById('cm-init').value,
+    notes:document.getElementById('cm-notes').value.trim()
+  };
+  if(!data.name){alert('Nome obrigatório');return}
+  if(editingCompany){
+    var c=state.companies.find(function(x){return x.id===editingCompany});
+    Object.assign(c,data);
+  } else {
+    var nc=Object.assign({id:uid(),contacts:[]},data);
+    state.companies.push(nc);
+    state.selected=nc.id;
+  }
+  save();render();closeModal('companyModal');
+}
+
+function deleteCompany(){
+  if(!editingCompany)return;
+  if(!confirm('Excluir empresa e todos os contatos?'))return;
+  state.companies=state.companies.filter(function(x){return x.id!==editingCompany});
+  if(state.selected===editingCompany)state.selected=state.companies[0]?state.companies[0].id:null;
+  save();render();closeModal('companyModal');
+}
+
+function openContactModal(companyId,contactId){
+  editingCompany=companyId;
+  editingContact=contactId||null;
+  var c=state.companies.find(function(x){return x.id===companyId});
+  var ct=contactId?c.contacts.find(function(x){return x.id===contactId}):{name:'',layer:'d',role:'',email:'',phone:'',linkedin:'',status:'cold',next:'',history:''};
+  document.getElementById('cn-title').textContent=contactId?'Editar Contato — '+c.name:'Novo Contato — '+c.name;
+  document.getElementById('cn-name').value=ct.name||'';
+  document.getElementById('cn-layer').value=ct.layer||'d';
+  document.getElementById('cn-role').value=ct.role||'';
+  document.getElementById('cn-email').value=ct.email||'';
+  document.getElementById('cn-phone').value=ct.phone||'';
+  document.getElementById('cn-linkedin').value=ct.linkedin||'';
+  document.getElementById('cn-status').value=ct.status||'cold';
+  document.getElementById('cn-next').value=ct.next||'';
+  document.getElementById('cn-history').value=ct.history||'';
+  document.getElementById('cn-delete').style.display=contactId?'inline-block':'none';
+  document.getElementById('contactModal').classList.add('open');
+}
+
+function saveContact(){
+  var c=state.companies.find(function(x){return x.id===editingCompany});
+  if(!c)return;
+  var data={
+    name:document.getElementById('cn-name').value.trim(),
+    layer:document.getElementById('cn-layer').value,
+    role:document.getElementById('cn-role').value.trim(),
+    email:document.getElementById('cn-email').value.trim(),
+    phone:document.getElementById('cn-phone').value.trim(),
+    linkedin:document.getElementById('cn-linkedin').value.trim(),
+    status:document.getElementById('cn-status').value,
+    next:document.getElementById('cn-next').value.trim(),
+    history:document.getElementById('cn-history').value
+  };
+  if(!data.name){alert('Nome obrigatório');return}
+  if(editingContact){
+    var ct=c.contacts.find(function(x){return x.id===editingContact});
+    Object.assign(ct,data);
+  } else {
+    c.contacts.push(Object.assign({id:uid()},data));
+  }
+  save();render();closeModal('contactModal');
+}
+
+function deleteContact(){
+  if(!editingContact)return;
+  if(!confirm('Excluir contato?'))return;
+  var c=state.companies.find(function(x){return x.id===editingCompany});
+  c.contacts=c.contacts.filter(function(x){return x.id!==editingContact});
+  save();render();closeModal('contactModal');
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+function setTab(t){
+  document.querySelectorAll('.tab').forEach(function(el){el.classList.toggle('active',el.dataset.tab===t)});
+  document.getElementById('tab-play').style.display=t==='play'?'':'none';
+  document.getElementById('tab-cadence').style.display=t==='cadence'?'':'none';
+  document.getElementById('tab-msgs').style.display=t==='msgs'?'':'none';
+}
+
+function exportData(){
+  var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mapa-fullcx-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+function importData(){
+  var inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=function(e){
+    var f=e.target.files[0];if(!f)return;
+    var r=new FileReader();r.onload=function(){
+      try{state=JSON.parse(r.result);save();render()}catch(err){alert('JSON inválido')}
+    };r.readAsText(f);
+  };inp.click();
+}
+
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+load();seed();render();
+</script>
+</body>
+</html>
