@@ -459,8 +459,6 @@ function renderContent(){
     +'<button class="btn primary" onclick="openContactModal(\''+c.id+'\')">+ Contato</button>'
     +'</div>';
 
-  if(c.notes)html+='<div class="approach-box" style="margin-bottom:14px">'+escapeHtml(c.notes).replace(/\n/g,'<br>')+'</div>';
-
   html+='<div class="kpis">'
     +'<div class="kpi"><b>'+total+'</b>contatos</div>'
     +'<div class="kpi"><b>'+coverage.c+'</b>C-Level</div>'
