@@ -67,7 +67,8 @@
   .org-grid.drop-target{background:rgba(255,107,53,.08);outline:2px dashed var(--acc);outline-offset:-2px}
   .node{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 24px;width:210px;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden}
   .n-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
-  .avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;background-size:cover;background-position:center;background-repeat:no-repeat;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+  .avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;background-size:cover;background-position:center;background-repeat:no-repeat;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;position:relative}
+  .avatar:hover::after{content:'📷';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);border-radius:50%;font-size:14px}
   .node.c .avatar{background-color:#dc2626}
   .node.d .avatar{background-color:#d97706}
   .node.o .avatar{background-color:#059669}
@@ -642,7 +643,7 @@ function renderContent(){
         +'<button title="Editar" onclick="event.stopPropagation();openContactModal(\''+c.id+'\',\''+ct.id+'\')">✎</button>'
         +'<button class="del" title="Excluir" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\',\''+ct.id+'\')">🗑</button>'
         +'</div>'
-        +'<div class="n-head"><div class="avatar" style="'+avatarStyle+'">'+avatarInitials+'</div>'
+        +'<div class="n-head"><div class="avatar" title="Clique pra trocar foto" onclick="event.stopPropagation();pickAvatar(\''+c.id+'\',\''+ct.id+'\')" style="'+avatarStyle+'">'+avatarInitials+'</div>'
         +'<div class="n-main">'
         +'<div class="n-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
         +'<div class="n-role" style="min-height:initial;margin-bottom:0">'+escapeHtml(ct.role||'—')+'</div>'
@@ -916,6 +917,52 @@ function togglePlaybook(){
     });
   }
 })();
+
+function pickAvatar(companyId,contactId){
+  var c=state.companies.find(function(x){return x.id===companyId});
+  if(!c)return;
+  var ct=c.contacts.find(function(x){return x.id===contactId});
+  if(!ct)return;
+  // Menu: upload / URL / remove
+  var choice=prompt('Foto do '+(ct.name||'contato')+':\n\n1 = Upload arquivo\n2 = Colar URL\n3 = Remover foto\n\nDigite 1, 2 ou 3:','1');
+  if(choice==='1'){
+    var inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+    inp.onchange=function(e){
+      var f=e.target.files[0];if(!f)return;
+      compressImage(f,function(dataUrl){
+        ct.photoUrl=dataUrl;
+        save();render();
+      });
+    };
+    inp.click();
+  } else if(choice==='2'){
+    var url=prompt('Cole o URL da foto:',ct.photoUrl||'');
+    if(url!==null){ct.photoUrl=url.trim();save();render()}
+  } else if(choice==='3'){
+    ct.photoUrl='';save();render();
+  }
+}
+
+function compressImage(file,callback){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var size=96;
+      var canvas=document.createElement('canvas');
+      canvas.width=size;canvas.height=size;
+      var ctx=canvas.getContext('2d');
+      // Cover fit
+      var s=Math.min(img.width,img.height);
+      var sx=(img.width-s)/2, sy=(img.height-s)/2;
+      ctx.drawImage(img,sx,sy,s,s,0,0,size,size);
+      callback(canvas.toDataURL('image/jpeg',0.72));
+    };
+    img.onerror=function(){alert('Erro ao carregar imagem')};
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 
 function initials(name){
   if(!name)return '?';
