@@ -602,10 +602,11 @@ function renderContent(){
 
   var logoStyle=c.logoUrl?'background-image:url(\''+escapeHtml(c.logoUrl).replace(/'/g,"\\'")+'\')':'';
   var logoText=c.logoUrl?'':escapeHtml(c.name);
+  var nameHtml=c.logoUrl?'<button class="btn sm ghost" onclick="openCompanyModal(\''+c.id+'\')">editar</button>':'<h2 style="margin:0">'+escapeHtml(c.name)+' <button class="btn sm ghost" onclick="openCompanyModal(\''+c.id+'\')">editar</button></h2>';
   var html='<div class="company-header">'
     +'<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
     +'<div class="logo-box" title="Clique pra trocar logo" onclick="pickCompanyLogo(\''+c.id+'\')" style="'+logoStyle+'">'+logoText+'</div>'
-    +'<div><h2>'+escapeHtml(c.name)+' <button class="btn sm ghost" onclick="openCompanyModal(\''+c.id+'\')">editar</button></h2>'
+    +'<div>'+nameHtml
     +'<div class="company-meta">'+escapeHtml(c.sector||'')+' · '+escapeHtml(c.tier||'')+(c.value?' · R$ '+escapeHtml(c.value):'')+(c.init?' · '+escapeHtml(c.init):'')+'</div></div>'
     +'</div>'
     +'<button class="btn primary" onclick="openContactModal(\''+c.id+'\')">+ Contato</button>'
