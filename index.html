@@ -27,9 +27,15 @@
   .btn.sm{padding:4px 10px;font-size:12px}
   .btn.ghost{background:transparent}
   .btn.danger{color:#dc2626}.btn.danger:hover{border-color:#dc2626}
-  main{flex:1;display:grid;grid-template-columns:280px 1fr 360px;gap:0;min-height:0}
-  @media(max-width:1100px){main{grid-template-columns:240px 1fr}.playbook{display:none}}
-  @media(max-width:700px){main{grid-template-columns:1fr}.sidebar{display:none}}
+  main{flex:1;display:grid;grid-template-columns:280px 1fr 360px;gap:0;min-height:0;transition:grid-template-columns .2s}
+  main.pb-collapsed{grid-template-columns:280px 1fr 36px}
+  main.pb-collapsed .playbook>*:not(.pb-toggle){display:none}
+  main.pb-collapsed .playbook{padding:8px 4px;align-items:center}
+  @media(max-width:1100px){main{grid-template-columns:240px 1fr 36px}main.pb-collapsed{grid-template-columns:240px 1fr 36px}}
+  @media(max-width:700px){main{grid-template-columns:1fr}.sidebar{display:none}.playbook{display:none}}
+  .pb-toggle{position:absolute;top:8px;left:8px;background:#fff;border:1px solid var(--line);border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--muted);z-index:5}
+  .pb-toggle:hover{border-color:var(--acc);color:var(--acc)}
+  main.pb-collapsed .pb-toggle{position:static}
   .sidebar{border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:12px}
   .sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:10px 8px 8px}
   .company-item{padding:10px 10px 10px 8px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;display:flex;align-items:center;gap:6px;position:relative}
@@ -107,7 +113,7 @@
   .st-booked{background:#dbeafe;color:#1e40af}
   .st-won{background:#d1fae5;color:#065f46}
   .st-lost{background:#fee2e2;color:#991b1b}
-  .playbook{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:14px}
+  .playbook{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:14px;position:relative;display:flex;flex-direction:column}
   .playbook h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:0 0 8px}
   .pb-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;font-size:12.5px}
   .pb-card h4{margin:0 0 6px;font-size:13px;display:flex;align-items:center;gap:6px}
@@ -192,6 +198,7 @@
   <section class="content" id="content"></section>
 
   <aside class="playbook">
+    <button class="pb-toggle" onclick="togglePlaybook()" title="Expandir/Recolher painel" id="pbToggle">›</button>
     <div class="tabs">
       <div class="tab active" data-tab="play" onclick="setTab('play')">Playbook</div>
       <div class="tab" data-tab="cadence" onclick="setTab('cadence')">Cadência</div>
@@ -893,6 +900,22 @@ function importData(){
     };r.readAsText(f);
   };inp.click();
 }
+
+function togglePlaybook(){
+  var m=document.querySelector('main');
+  m.classList.toggle('pb-collapsed');
+  var collapsed=m.classList.contains('pb-collapsed');
+  document.getElementById('pbToggle').textContent=collapsed?'‹':'›';
+  localStorage.setItem('fullcx_pb_collapsed',collapsed?'1':'0');
+}
+(function initPlaybookState(){
+  if(localStorage.getItem('fullcx_pb_collapsed')==='1'){
+    document.addEventListener('DOMContentLoaded',function(){
+      var m=document.querySelector('main');
+      if(m){m.classList.add('pb-collapsed');document.getElementById('pbToggle').textContent='‹'}
+    });
+  }
+})();
 
 function initials(name){
   if(!name)return '?';
