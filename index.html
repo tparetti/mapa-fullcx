@@ -51,7 +51,9 @@
   .company-item .ci-sub{font-size:11px;color:var(--muted);margin-top:2px}
   .content{overflow:auto;padding:18px 22px}
   .company-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
-  .company-header h2{margin:0;font-size:22px}
+  .company-header h2{margin:0;font-size:22px;display:flex;align-items:center;gap:12px}
+  .logo-box{width:80px;height:80px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background-size:contain;background-position:center;background-repeat:no-repeat;font-weight:800;color:var(--muted);font-size:13px;text-align:center;padding:6px;position:relative;overflow:hidden}
+  .logo-box:hover::after{content:'📷';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);color:#fff;font-size:20px;border-radius:12px}
   .company-meta{color:var(--muted);font-size:12px;margin-top:4px}
   .kpis{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
   .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px}
@@ -598,9 +600,14 @@ function renderContent(){
   var coverage={c:0,d:0,o:0};
   c.contacts.forEach(function(x){coverage[x.layer]++});
 
+  var logoStyle=c.logoUrl?'background-image:url(\''+escapeHtml(c.logoUrl).replace(/'/g,"\\'")+'\')':'';
+  var logoText=c.logoUrl?'':escapeHtml(c.name);
   var html='<div class="company-header">'
+    +'<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
+    +'<div class="logo-box" title="Clique pra trocar logo" onclick="pickCompanyLogo(\''+c.id+'\')" style="'+logoStyle+'">'+logoText+'</div>'
     +'<div><h2>'+escapeHtml(c.name)+' <button class="btn sm ghost" onclick="openCompanyModal(\''+c.id+'\')">editar</button></h2>'
     +'<div class="company-meta">'+escapeHtml(c.sector||'')+' · '+escapeHtml(c.tier||'')+(c.value?' · R$ '+escapeHtml(c.value):'')+(c.init?' · '+escapeHtml(c.init):'')+'</div></div>'
+    +'</div>'
     +'<button class="btn primary" onclick="openContactModal(\''+c.id+'\')">+ Contato</button>'
     +'</div>';
 
@@ -976,6 +983,45 @@ function pickAvatarFromModal(){
   } else if(choice==='3'){
     apply('');
   }
+}
+
+function pickCompanyLogo(companyId){
+  var c=state.companies.find(function(x){return x.id===companyId});
+  if(!c)return;
+  var choice=prompt('Logo '+c.name+':\n\n1 = Upload arquivo\n2 = Colar URL\n3 = Remover\n\nDigite 1, 2 ou 3:','1');
+  if(choice==='1'){
+    var inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+    inp.onchange=function(e){
+      var f=e.target.files[0];if(!f)return;
+      compressImageLogo(f,function(url){c.logoUrl=url;save();render()});
+    };inp.click();
+  } else if(choice==='2'){
+    var url=prompt('Cole o URL do logo:',c.logoUrl||'');
+    if(url!==null){c.logoUrl=url.trim();save();render()}
+  } else if(choice==='3'){
+    c.logoUrl='';save();render();
+  }
+}
+
+function compressImageLogo(file,callback){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      // Keep aspect ratio, max 200x200
+      var max=200;
+      var w=img.width,h=img.height;
+      if(w>h){if(w>max){h=h*max/w;w=max}}else{if(h>max){w=w*max/h;h=max}}
+      var canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      var ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      callback(canvas.toDataURL('image/png'));
+    };
+    img.onerror=function(){alert('Erro ao carregar imagem')};
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function pickAvatar(companyId,contactId){
