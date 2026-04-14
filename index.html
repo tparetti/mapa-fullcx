@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <title>Mapa de Relacionamento — Full CX Mutant</title>
 <style>
   :root{
@@ -474,15 +477,10 @@ async function doLogin(){
     if(!best){throw new Error('Não consegui decriptar — verifique a senha')}
     state=best.state;
 
-    // Save locally always; push to cloud only if source was local (to sync local edits up)
-    // or seed (first-ever login to seed the gist). Never push cloud back to cloud.
-    if(best.src==='cloud'){
-      // cloud already authoritative; just cache locally
-      var blob=await encryptState(_authKey,state);
-      localStorage.setItem('fullcx_enc',JSON.stringify(blob));
-    } else {
-      await saveState(); // pushes to cloud
-    }
+    // NUNCA push no login. Só cache local. Push acontece apenas em edição real do usuário.
+    var blob=await encryptState(_authKey,state);
+    localStorage.setItem('fullcx_enc',JSON.stringify(blob));
+    console.log('[login] loaded from',best.src,'companies=',best.count)
 
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='flex';
