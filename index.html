@@ -439,39 +439,50 @@ async function doLogin(){
     _sync.token=bundle.token;_sync.gistId=bundle.gist_id;
     localStorage.setItem('fullcx_meta',JSON.stringify({salt:syncBlob.salt,iters:syncBlob.iters}));
 
-    // 2. Gather candidates: cloud, local (current meta), local (legacy metas we've seen)
-    var candidates=[];
+    // 2. Strict priority: cloud > local > seed. Never "upgrade" to seed if cloud has data.
+    var best=null;
+    // Try cloud first
     try{
       var remote=await pullFromCloud();
-      if(remote&&remote.ct)candidates.push({src:'cloud',blob:remote});
+      if(remote&&remote.ct){
+        try{
+          var s=await decryptState(_authKey,remote);
+          if(s&&s.companies)best={src:'cloud',state:s,count:s.companies.length}
+        }catch(e){console.warn('decrypt cloud fail',e)}
+      }
     }catch(e){console.warn('pull fail',e)}
-    var loc=localStorage.getItem('fullcx_enc');
-    if(loc){try{candidates.push({src:'local',blob:JSON.parse(loc)})}catch(_){}}
-    try{
-      var seedResp=await fetch('seed.enc.json',{cache:'no-store'});
-      if(seedResp.ok)candidates.push({src:'seed',blob:await seedResp.json()});
-    }catch(_){}
-
-    // Try to decrypt each; pick the one with most companies
-    var best=null;
-    for(var i=0;i<candidates.length;i++){
+    // Fallback: local (only if cloud failed/missing)
+    if(!best){
+      var loc=localStorage.getItem('fullcx_enc');
+      if(loc){try{
+        var sl=await decryptState(_authKey,JSON.parse(loc));
+        if(sl&&sl.companies)best={src:'local',state:sl,count:sl.companies.length}
+      }catch(_){}}
+    }
+    // Fallback: seed (only first-ever login with no cloud and no local)
+    if(!best){
       try{
-        var s=await decryptState(_authKey,candidates[i].blob);
-        var count=(s&&s.companies)?s.companies.length:0;
-        if(!best||count>best.count){best={src:candidates[i].src,state:s,count:count}}
-      }catch(e){console.warn('decrypt fail',candidates[i].src,e)}
+        var seedResp=await fetch('seed.enc.json',{cache:'no-store'});
+        if(seedResp.ok){
+          var seedBlob=await seedResp.json();
+          var ss=await decryptState(_authKey,seedBlob);
+          if(ss&&ss.companies)best={src:'seed',state:ss,count:ss.companies.length}
+        }
+      }catch(_){}
     }
 
     if(!best){throw new Error('Não consegui decriptar — verifique a senha')}
-    if(best.count===0){
-      if(!confirm('Só encontrei estado vazio. Entrar assim mesmo? (clica Cancelar pra abortar sem sobrescrever)')){
-        throw new Error('abortado');
-      }
-    }
     state=best.state;
 
-    // Only save/push if state is non-empty OR cloud already had non-empty (safe)
-    if(best.count>0){await saveState()}
+    // Save locally always; push to cloud only if source was local (to sync local edits up)
+    // or seed (first-ever login to seed the gist). Never push cloud back to cloud.
+    if(best.src==='cloud'){
+      // cloud already authoritative; just cache locally
+      var blob=await encryptState(_authKey,state);
+      localStorage.setItem('fullcx_enc',JSON.stringify(blob));
+    } else {
+      await saveState(); // pushes to cloud
+    }
 
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='flex';
