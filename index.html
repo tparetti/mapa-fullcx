@@ -59,7 +59,13 @@
   .contacts{padding:14px 16px}
   .org-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;min-height:80px;padding:4px;border-radius:8px;transition:background .15s}
   .org-grid.drop-target{background:rgba(255,107,53,.08);outline:2px dashed var(--acc);outline-offset:-2px}
-  .node{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 24px;width:190px;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden}
+  .node{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 24px;width:210px;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden}
+  .n-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
+  .avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;background-size:cover;background-position:center;background-repeat:no-repeat;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+  .node.c .avatar{background-color:#dc2626}
+  .node.d .avatar{background-color:#d97706}
+  .node.o .avatar{background-color:#059669}
+  .n-head .n-main{flex:1;min-width:0}
   .drag-handle{position:absolute;left:0;top:0;bottom:0;width:18px;display:flex;align-items:center;justify-content:center;cursor:grab;color:#cbd5e1;font-size:14px;user-select:none;background:var(--panel2);border-right:1px solid var(--line)}
   .drag-handle:hover{color:var(--acc);background:#fff7ed}
   .drag-handle:active{cursor:grabbing}
@@ -326,6 +332,7 @@ Qualquer coisa, é só responder. Abraço.</div>
       <div class="field"><label>E-mail</label><input id="cn-email" type="text" autocomplete="off" name="no-email-autofill"/></div>
       <div class="field"><label>Celular</label><input id="cn-phone" type="text" autocomplete="off" name="no-phone-autofill"/></div>
     </div>
+    <div class="field"><label>URL da foto (opcional)</label><input id="cn-photo" type="text" autocomplete="off" placeholder="https://... (Imgur, Drive público, etc)"/></div>
     <div class="field-row">
       <div class="field"><label>LinkedIn</label><input id="cn-linkedin" type="text" autocomplete="off"/></div>
       <div class="field"><label>Status</label><select id="cn-status">
@@ -614,6 +621,8 @@ function renderContent(){
         var g=computeGap(ct.lastDate,ct.cadence);
         gapHtml='<span class="gap-badge gap-'+g.cls+'" title="Último: '+ct.lastDate+' · Meta: '+ct.cadence+'d">'+g.label+'</span>';
       }
+      var avatarStyle=ct.photoUrl?'background-image:url(\''+escapeHtml(ct.photoUrl)+'\')':'';
+      var avatarInitials=ct.photoUrl?'':initials(ct.name);
       html+='<div class="node '+layer+'" draggable="true" data-id="'+ct.id+'" data-layer="'+layer+'" '
         +'ondragstart="onNodeDragStart(event,\''+ct.id+'\',\''+layer+'\')" '
         +'ondragend="onNodeDragEnd(event)" '
@@ -626,8 +635,11 @@ function renderContent(){
         +'<button title="Editar" onclick="event.stopPropagation();openContactModal(\''+c.id+'\',\''+ct.id+'\')">✎</button>'
         +'<button class="del" title="Excluir" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\',\''+ct.id+'\')">🗑</button>'
         +'</div>'
+        +'<div class="n-head"><div class="avatar" style="'+avatarStyle+'">'+avatarInitials+'</div>'
+        +'<div class="n-main">'
         +'<div class="n-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
-        +'<div class="n-role">'+escapeHtml(ct.role||'—')+'</div>'
+        +'<div class="n-role" style="min-height:initial;margin-bottom:0">'+escapeHtml(ct.role||'—')+'</div>'
+        +'</div></div>'
         +'<div class="n-foot">'
         +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'+gapHtml
         +(chans.length?'<div class="n-chans">'+chans.join('')+'</div>':'<span></span>')
@@ -701,6 +713,7 @@ function openContactModal(companyId,contactId,defaultLayer){
   document.getElementById('cn-email').value=ct.email||'';
   document.getElementById('cn-phone').value=ct.phone||'';
   document.getElementById('cn-linkedin').value=ct.linkedin||'';
+  document.getElementById('cn-photo').value=ct.photoUrl||'';
   document.getElementById('cn-status').value=ct.status||'cold';
   document.getElementById('cn-next').value=ct.next||'';
   document.getElementById('cn-next-date').value=ct.nextDate||'';
@@ -721,6 +734,7 @@ function saveContact(){
     email:document.getElementById('cn-email').value.trim(),
     phone:document.getElementById('cn-phone').value.trim(),
     linkedin:document.getElementById('cn-linkedin').value.trim(),
+    photoUrl:document.getElementById('cn-photo').value.trim(),
     status:document.getElementById('cn-status').value,
     next:document.getElementById('cn-next').value.trim(),
     nextDate:document.getElementById('cn-next-date').value,
@@ -878,6 +892,14 @@ function importData(){
       try{state=JSON.parse(r.result);save();render()}catch(err){alert('JSON inválido')}
     };r.readAsText(f);
   };inp.click();
+}
+
+function initials(name){
+  if(!name)return '?';
+  var parts=String(name).trim().split(/\s+/).filter(function(p){return p.length>0});
+  if(parts.length===0)return '?';
+  if(parts.length===1)return parts[0].slice(0,2).toUpperCase();
+  return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
 }
 
 function computeGap(lastDate,cadence){
