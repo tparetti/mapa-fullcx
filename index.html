@@ -69,6 +69,11 @@
   .n-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
   .avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;background-size:cover;background-position:center;background-repeat:no-repeat;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;position:relative}
   .avatar:hover::after{content:'📷';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);border-radius:50%;font-size:14px}
+  .avatar-lg{width:88px;height:88px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:28px;background-size:cover;background-position:center;background-repeat:no-repeat;border:3px solid #fff;box-shadow:0 0 0 1px var(--line),0 4px 12px rgba(0,0,0,.08);cursor:pointer;position:relative;background-color:#d97706}
+  .avatar-lg.c{background-color:#dc2626}
+  .avatar-lg.d{background-color:#d97706}
+  .avatar-lg.o{background-color:#059669}
+  .avatar-lg:hover::after{content:'📷 Trocar';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);border-radius:50%;font-size:11px;color:#fff}
   .node.c .avatar{background-color:#dc2626}
   .node.d .avatar{background-color:#d97706}
   .node.o .avatar{background-color:#059669}
@@ -327,7 +332,10 @@ Qualquer coisa, é só responder. Abraço.</div>
 
 <div class="modal" id="contactModal">
   <div class="modal-box">
-    <h3 id="cn-title">Novo Contato</h3>
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
+      <div id="cn-avatar-preview" class="avatar-lg" onclick="pickAvatarFromModal()" title="Clique pra trocar foto"></div>
+      <h3 id="cn-title" style="margin:0;flex:1">Novo Contato</h3>
+    </div>
     <form autocomplete="off" onsubmit="event.preventDefault();saveContact();return false">
     <input type="text" name="prevent-autofill" autocomplete="off" style="display:none" tabindex="-1"/>
     <input type="password" name="prevent-autofill-pw" autocomplete="new-password" style="display:none" tabindex="-1"/>
@@ -722,6 +730,7 @@ function openContactModal(companyId,contactId,defaultLayer){
   document.getElementById('cn-phone').value=ct.phone||'';
   document.getElementById('cn-linkedin').value=ct.linkedin||'';
   document.getElementById('cn-photo').value=ct.photoUrl||'';
+  updateAvatarPreview(ct);
   document.getElementById('cn-status').value=ct.status||'cold';
   document.getElementById('cn-next').value=ct.next||'';
   document.getElementById('cn-next-date').value=ct.nextDate||'';
@@ -917,6 +926,57 @@ function togglePlaybook(){
     });
   }
 })();
+
+function updateAvatarPreview(ct){
+  var el=document.getElementById('cn-avatar-preview');
+  if(!el)return;
+  el.className='avatar-lg '+(ct.layer||'d');
+  if(ct.photoUrl){
+    el.style.backgroundImage='url(\''+ct.photoUrl.replace(/'/g,"\\'")+'\')';
+    el.textContent='';
+  } else {
+    el.style.backgroundImage='';
+    el.textContent=initials(ct.name);
+  }
+}
+
+function pickAvatarFromModal(){
+  if(!editingCompany)return;
+  var c=state.companies.find(function(x){return x.id===editingCompany});
+  if(!c)return;
+  // For new contact, create/find draft from form state
+  var ct;
+  if(editingContact){
+    ct=c.contacts.find(function(x){return x.id===editingContact});
+  } else {
+    // Create temp ct for preview; user still needs to Save to persist
+    ct={name:document.getElementById('cn-name').value,layer:document.getElementById('cn-layer').value,photoUrl:document.getElementById('cn-photo').value};
+  }
+  if(!ct)return;
+  var choice=prompt('Foto:\n\n1 = Upload arquivo\n2 = Colar URL\n3 = Remover foto\n\nDigite 1, 2 ou 3:','1');
+  var apply=function(url){
+    document.getElementById('cn-photo').value=url||'';
+    ct.photoUrl=url||'';
+    updateAvatarPreview({name:document.getElementById('cn-name').value,layer:document.getElementById('cn-layer').value,photoUrl:url||''});
+    if(editingContact){
+      var real=c.contacts.find(function(x){return x.id===editingContact});
+      if(real){real.photoUrl=url||'';save();render()}
+    }
+  };
+  if(choice==='1'){
+    var inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+    inp.onchange=function(e){
+      var f=e.target.files[0];if(!f)return;
+      compressImage(f,apply);
+    };
+    inp.click();
+  } else if(choice==='2'){
+    var url=prompt('Cole o URL da foto:',ct.photoUrl||'');
+    if(url!==null)apply(url.trim());
+  } else if(choice==='3'){
+    apply('');
+  }
+}
 
 function pickAvatar(companyId,contactId){
   var c=state.companies.find(function(x){return x.id===companyId});
