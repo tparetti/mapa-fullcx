@@ -314,17 +314,20 @@ Qualquer coisa, é só responder. Abraço.</div>
 <div class="modal" id="contactModal">
   <div class="modal-box">
     <h3 id="cn-title">Novo Contato</h3>
+    <form autocomplete="off" onsubmit="event.preventDefault();saveContact();return false">
+    <input type="text" name="prevent-autofill" autocomplete="off" style="display:none" tabindex="-1"/>
+    <input type="password" name="prevent-autofill-pw" autocomplete="new-password" style="display:none" tabindex="-1"/>
     <div class="field-row">
-      <div class="field"><label>Nome</label><input id="cn-name" type="text"/></div>
-      <div class="field"><label>Camada</label><select id="cn-layer"><option value="c">C-Level</option><option value="d">Diretoria</option><option value="o">Operação</option></select></div>
+      <div class="field"><label>Nome</label><input id="cn-name" type="text" autocomplete="off"/></div>
+      <div class="field"><label>Camada</label><select id="cn-layer" autocomplete="off"><option value="c">C-Level</option><option value="d">Diretoria</option><option value="o">Operação</option></select></div>
     </div>
-    <div class="field"><label>Cargo</label><input id="cn-role" type="text" placeholder="ex: Diretor de CX"/></div>
+    <div class="field"><label>Cargo</label><input id="cn-role" type="text" autocomplete="off" placeholder="ex: Diretor de CX"/></div>
     <div class="field-row">
-      <div class="field"><label>E-mail</label><input id="cn-email" type="text"/></div>
-      <div class="field"><label>Celular</label><input id="cn-phone" type="text"/></div>
+      <div class="field"><label>E-mail</label><input id="cn-email" type="text" autocomplete="off" name="no-email-autofill"/></div>
+      <div class="field"><label>Celular</label><input id="cn-phone" type="text" autocomplete="off" name="no-phone-autofill"/></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>LinkedIn</label><input id="cn-linkedin" type="text"/></div>
+      <div class="field"><label>LinkedIn</label><input id="cn-linkedin" type="text" autocomplete="off"/></div>
       <div class="field"><label>Status</label><select id="cn-status">
         <option value="cold">Cold — não tocado</option>
         <option value="warm">Warm — connectado</option>
@@ -342,14 +345,15 @@ Qualquer coisa, é só responder. Abraço.</div>
       <div class="field"><label>Último contato</label><input id="cn-last-date" type="date"/></div>
       <div class="field"><label>Meta de frequência (dias)</label><input id="cn-cadence" type="number" min="1" placeholder="ex: 30"/></div>
     </div>
-    <div class="field"><label>Histórico de interações</label><textarea id="cn-history" placeholder="Uma por linha: 13/04 - LinkedIn connect aceito"></textarea></div>
+    <div class="field"><label>Histórico de interações</label><textarea id="cn-history" autocomplete="off" placeholder="Uma por linha: 13/04 - LinkedIn connect aceito"></textarea></div>
     <div class="modal-actions">
-      <button class="btn danger" id="cn-delete" style="display:none" onclick="deleteContact()">Excluir</button>
+      <button type="button" class="btn danger" id="cn-delete" style="display:none" onclick="deleteContact()">Excluir</button>
       <div style="display:flex;gap:8px;margin-left:auto">
-        <button class="btn ghost" onclick="closeModal('contactModal')">Cancelar</button>
-        <button class="btn primary" onclick="saveContact()">Salvar</button>
+        <button type="button" class="btn ghost" onclick="closeModal('contactModal')">Cancelar</button>
+        <button type="button" class="btn primary" onclick="saveContact()">Salvar</button>
       </div>
     </div>
+    </form>
   </div>
 </div>
 
