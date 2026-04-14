@@ -82,6 +82,10 @@
   .node .n-acts button:hover{border-color:var(--acc);color:var(--acc)}
   .node .n-acts button.del:hover{border-color:#dc2626;color:#dc2626}
   .node.empty-node{background:var(--panel2);border:1px dashed var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;min-height:70px;font-size:12px;box-shadow:none}
+  .gap-badge{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:4px}
+  .gap-ok{background:#d1fae5;color:#065f46}
+  .gap-soon{background:#fef3c7;color:#92400e}
+  .gap-over{background:#fee2e2;color:#991b1b}
   .node.empty-node:hover{border-color:var(--acc);color:var(--acc);transform:none;box-shadow:none}
   .row-acts{display:flex;gap:4px}
   .c-main{min-width:0}
@@ -163,6 +167,7 @@
     <button class="btn sm" onclick="openCompanyModal()">+ Empresa</button>
     <button class="btn sm ghost" onclick="exportData()">Exportar</button>
     <button class="btn sm ghost" onclick="importData()">Importar</button>
+    <button class="btn sm" onclick="openGapReport()" title="Ver contatos fora da meta">⚠️ Gaps</button>
     <span id="syncStatus" style="font-size:11px;color:var(--muted);align-self:center">sincronizado</span>
     <button class="btn sm ghost" onclick="pullNow()" title="Puxar do cloud">↻</button>
     <button class="btn sm ghost" onclick="logout()" title="Bloquear">🔒</button>
@@ -304,6 +309,8 @@ Qualquer coisa, é só responder. Abraço.</div>
   </div>
 </div>
 
+<div class="modal" id="gapModal"><div class="modal-box" style="width:min(800px,95vw)"></div></div>
+
 <div class="modal" id="contactModal">
   <div class="modal-box">
     <h3 id="cn-title">Novo Contato</h3>
@@ -330,6 +337,10 @@ Qualquer coisa, é só responder. Abraço.</div>
     <div class="field-row">
       <div class="field"><label>Próxima ação</label><input id="cn-next" type="text" placeholder="ex: Enviar e-mail 2"/></div>
       <div class="field"><label>Data</label><input id="cn-next-date" type="date"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Último contato</label><input id="cn-last-date" type="date"/></div>
+      <div class="field"><label>Meta de frequência (dias)</label><input id="cn-cadence" type="number" min="1" placeholder="ex: 30"/></div>
     </div>
     <div class="field"><label>Histórico de interações</label><textarea id="cn-history" placeholder="Uma por linha: 13/04 - LinkedIn connect aceito"></textarea></div>
     <div class="modal-actions">
@@ -594,6 +605,11 @@ function renderContent(){
       var nextLabel=ct.next||'';
       if(ct.nextDate){var dp=ct.nextDate.split('-');nextLabel+=(nextLabel?' · ':'')+dp[2]+'/'+dp[1]}
       if(nextLabel)chans.push('<span title="'+escapeHtml(nextLabel)+'">⏰</span>');
+      var gapHtml='';
+      if(ct.lastDate&&ct.cadence){
+        var g=computeGap(ct.lastDate,ct.cadence);
+        gapHtml='<span class="gap-badge gap-'+g.cls+'" title="Último: '+ct.lastDate+' · Meta: '+ct.cadence+'d">'+g.label+'</span>';
+      }
       html+='<div class="node '+layer+'" draggable="true" data-id="'+ct.id+'" data-layer="'+layer+'" '
         +'ondragstart="onNodeDragStart(event,\''+ct.id+'\',\''+layer+'\')" '
         +'ondragend="onNodeDragEnd(event)" '
@@ -609,7 +625,7 @@ function renderContent(){
         +'<div class="n-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
         +'<div class="n-role">'+escapeHtml(ct.role||'—')+'</div>'
         +'<div class="n-foot">'
-        +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'
+        +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'+gapHtml
         +(chans.length?'<div class="n-chans">'+chans.join('')+'</div>':'<span></span>')
         +'</div>'
         +'</div>'
@@ -671,7 +687,9 @@ function openContactModal(companyId,contactId,defaultLayer){
   editingCompany=companyId;
   editingContact=contactId||null;
   var c=state.companies.find(function(x){return x.id===companyId});
-  var ct=contactId?c.contacts.find(function(x){return x.id===contactId}):{name:'',layer:defaultLayer||'d',role:'',email:'',phone:'',linkedin:'',status:'cold',next:'',nextDate:'',history:''};
+  var defLayer=defaultLayer||'d';
+  var defCadence={c:60,d:30,o:15}[defLayer];
+  var ct=contactId?c.contacts.find(function(x){return x.id===contactId}):{name:'',layer:defLayer,role:'',email:'',phone:'',linkedin:'',status:'cold',next:'',nextDate:'',lastDate:'',cadence:defCadence,history:''};
   document.getElementById('cn-title').textContent=contactId?'Editar Contato — '+c.name:'Novo Contato — '+c.name;
   document.getElementById('cn-name').value=ct.name||'';
   document.getElementById('cn-layer').value=ct.layer||'d';
@@ -682,6 +700,8 @@ function openContactModal(companyId,contactId,defaultLayer){
   document.getElementById('cn-status').value=ct.status||'cold';
   document.getElementById('cn-next').value=ct.next||'';
   document.getElementById('cn-next-date').value=ct.nextDate||'';
+  document.getElementById('cn-last-date').value=ct.lastDate||'';
+  document.getElementById('cn-cadence').value=ct.cadence||'';
   document.getElementById('cn-history').value=ct.history||'';
   document.getElementById('cn-delete').style.display=contactId?'inline-block':'none';
   document.getElementById('contactModal').classList.add('open');
@@ -700,6 +720,8 @@ function saveContact(){
     status:document.getElementById('cn-status').value,
     next:document.getElementById('cn-next').value.trim(),
     nextDate:document.getElementById('cn-next-date').value,
+    lastDate:document.getElementById('cn-last-date').value,
+    cadence:parseInt(document.getElementById('cn-cadence').value)||0,
     history:document.getElementById('cn-history').value
   };
   if(!data.name){alert('Nome obrigatório');return}
@@ -852,6 +874,56 @@ function importData(){
       try{state=JSON.parse(r.result);save();render()}catch(err){alert('JSON inválido')}
     };r.readAsText(f);
   };inp.click();
+}
+
+function computeGap(lastDate,cadence){
+  if(!lastDate||!cadence)return null;
+  var last=new Date(lastDate+'T00:00:00');
+  var today=new Date();today.setHours(0,0,0,0);
+  var days=Math.floor((today-last)/86400000);
+  var overdue=days-cadence;
+  if(overdue<=0){
+    // dentro da meta — quantos dias faltam
+    var left=-overdue;
+    if(left<=3)return {cls:'soon',label:'em '+left+'d',overdue:overdue,days:days}
+    return {cls:'ok',label:'ok '+days+'/'+cadence+'d',overdue:overdue,days:days}
+  }
+  return {cls:'over',label:'gap '+overdue+'d',overdue:overdue,days:days}
+}
+
+function openGapReport(){
+  var rows=[];
+  state.companies.forEach(function(co){
+    co.contacts.forEach(function(ct){
+      if(!ct.lastDate||!ct.cadence)return;
+      var g=computeGap(ct.lastDate,ct.cadence);
+      if(g&&g.overdue>0)rows.push({co:co,ct:ct,g:g})
+    });
+  });
+  rows.sort(function(a,b){return b.g.overdue-a.g.overdue});
+  var html='<h3>Relatório de Gaps <span style="font-size:12px;color:var(--muted);font-weight:400">'+rows.length+' contato(s) fora da meta</span></h3>';
+  if(rows.length===0){
+    html+='<div style="padding:30px;text-align:center;color:var(--muted)">🎉 Nenhum gap! Todos os contatos em dia.</div>';
+  } else {
+    html+='<div style="max-height:60vh;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">';
+    html+='<thead><tr style="border-bottom:1px solid var(--line);text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px"><th style="padding:8px 6px">Gap</th><th>Contato</th><th>Empresa</th><th>Camada</th><th>Meta</th><th>Último</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var layerName={c:'C-Level',d:'Diretoria',o:'Operação'}[r.ct.layer];
+      html+='<tr style="border-bottom:1px dashed var(--line);cursor:pointer" onclick="closeModal(\'gapModal\');selectCompany(\''+r.co.id+'\');openContactModal(\''+r.co.id+'\',\''+r.ct.id+'\')">'
+        +'<td style="padding:8px 6px"><span class="gap-badge gap-over">+'+r.g.overdue+'d</span></td>'
+        +'<td><b>'+escapeHtml(r.ct.name)+'</b><div style="font-size:11px;color:var(--muted)">'+escapeHtml(r.ct.role||'')+'</div></td>'
+        +'<td>'+escapeHtml(r.co.name)+'</td>'
+        +'<td style="font-size:11px">'+layerName+'</td>'
+        +'<td style="font-size:11px">'+r.ct.cadence+'d</td>'
+        +'<td style="font-size:11px">'+r.ct.lastDate+'</td>'
+        +'</tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+  html+='<div class="modal-actions"><button class="btn primary" onclick="closeModal(\'gapModal\')" style="margin-left:auto">Fechar</button></div>';
+  var box=document.getElementById('gapModal').querySelector('.modal-box');
+  box.innerHTML=html;
+  document.getElementById('gapModal').classList.add('open');
 }
 
 function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
