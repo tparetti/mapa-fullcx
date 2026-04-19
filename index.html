@@ -122,6 +122,12 @@
   .gap-ok{background:#d1fae5;color:#065f46}
   .gap-soon{background:#fef3c7;color:#92400e}
   .gap-over{background:#fee2e2;color:#991b1b}
+  .tag-badge{font-size:8px;padding:1px 5px;border-radius:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-left:4px}
+  .tag-champion{background:#d1fae5;color:#065f46}
+  .tag-decisor{background:#dbeafe;color:#1e40af}
+  .tag-influencer{background:#f3e8ff;color:#6b21a8}
+  .tag-blocker{background:#fee2e2;color:#991b1b}
+  .tag-gatekeeper{background:#fef3c7;color:#92400e}
   .node.empty-node:hover{border-color:var(--acc);color:var(--acc);transform:none;box-shadow:none}
   .row-acts{display:flex;gap:4px}
   .c-main{min-width:0}
@@ -167,6 +173,34 @@
   .tab.active{color:var(--ink);border-color:var(--acc)}
   .approach-box{background:linear-gradient(135deg,#fff7ed,#fff);border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:10px;color:#431407}
   .approach-box b{color:#c2410c}
+  .view-toggle{display:flex;background:var(--panel2);border-radius:8px;padding:2px;gap:2px}
+  .view-toggle button{padding:5px 12px;font-size:11px;font-weight:600;border:none;background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;font-family:inherit}
+  .view-toggle button.active{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(16,24,40,.08)}
+  .dash{padding:20px;overflow:auto;flex:1}
+  .dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:18px}
+  .dash-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(16,24,40,.04);position:relative}
+  .dash-card:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,24,40,.08)}
+  .dash-card .dc-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .dash-card .dc-logo{width:36px;height:36px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--muted);text-align:center;background-size:contain;background-position:center;background-repeat:no-repeat;flex-shrink:0;overflow:hidden}
+  .dash-card .dc-title{font-weight:700;font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dash-card .dc-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .dash-card .dc-bars{display:flex;gap:3px;margin-bottom:8px}
+  .dash-card .dc-bar{height:6px;border-radius:3px;flex:1;background:var(--panel2)}
+  .dash-card .dc-bar.c{background:var(--c)}.dash-card .dc-bar.d{background:var(--d)}.dash-card .dc-bar.o{background:var(--o)}
+  .dash-card .dc-stats{display:flex;gap:6px;flex-wrap:wrap}
+  .dash-card .dc-stat{font-size:10px;padding:2px 6px;border-radius:6px;background:var(--panel2);color:var(--muted)}
+  .dash-card .dc-stat b{color:var(--ink);font-weight:700;margin-right:2px}
+  .dash-card .dc-next{margin-top:8px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;display:flex;gap:4px;align-items:flex-start}
+  .dash-card .dc-next b{color:var(--ink);font-weight:500}
+  .agenda{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:18px}
+  .agenda h3{margin:0 0 12px;font-size:14px;display:flex;align-items:center;gap:8px}
+  .agenda-day{margin-bottom:12px}
+  .agenda-day .day-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--acc);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+  .agenda-item{display:flex;gap:10px;align-items:center;padding:6px 0;font-size:12px;cursor:pointer;border-radius:4px;padding:4px 6px}
+  .agenda-item:hover{background:var(--panel2)}
+  .agenda-item .ai-co{color:var(--muted);min-width:80px;font-size:11px}
+  .agenda-item .ai-name{font-weight:600;min-width:120px}
+  .agenda-item .ai-action{flex:1;color:var(--muted)}
   .login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#f7f8fb 0%,#fff 50%,#fff7ed 100%);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
   .login-box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:36px 32px;width:min(400px,95vw);box-shadow:0 20px 60px rgba(16,24,40,.1);text-align:center}
   .login-box h1{margin:0 0 6px;font-size:20px;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
@@ -200,6 +234,10 @@
     <h1>Mapa de Relacionamento <small>Full CX Mutant · Estratégia Enterprise</small></h1>
   </div>
   <div class="hdr-actions">
+    <div class="view-toggle">
+      <button class="active" id="vt-dash" onclick="setView('dash')">Dashboard</button>
+      <button id="vt-map" onclick="setView('map')">Mapa</button>
+    </div>
     <button class="btn sm" onclick="openCompanyModal()">+ Empresa</button>
     <button class="btn sm ghost" onclick="exportData()">Exportar</button>
     <button class="btn sm ghost" onclick="importData()">Importar</button>
@@ -214,7 +252,8 @@
   </div>
 </header>
 
-<main>
+<div class="dash" id="dashView" style="display:none"></div>
+<main id="mapView">
   <aside class="sidebar">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin:6px 6px 10px">
       <h3 style="margin:0">Empresas Alvo</h3>
@@ -383,6 +422,14 @@ Qualquer coisa, é só responder. Abraço.</div>
         <option value="lost">Lost — fora</option>
       </select></div>
     </div>
+    <div class="field"><label>Papel</label><select id="cn-tag" autocomplete="off">
+      <option value="">— nenhum —</option>
+      <option value="champion">Champion — puxa por nós</option>
+      <option value="decisor">Decisor — assina contrato</option>
+      <option value="influencer">Influencer — influencia decisão</option>
+      <option value="blocker">Blocker — pode travar</option>
+      <option value="gatekeeper">Gatekeeper — controla acesso</option>
+    </select></div>
     <div class="field-row">
       <div class="field"><label>Próxima ação</label><input id="cn-next" type="text" placeholder="ex: Enviar e-mail 2"/></div>
       <div class="field"><label>Data</label><input id="cn-next-date" type="date"/></div>
@@ -546,6 +593,7 @@ async function doLogin(){
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='flex';
     setStatus('carregado de '+best.src+' ('+best.count+' empresas)');
+    setView('dash');
     render();
   }catch(e){
     errEl.textContent=e.message||'Erro ao entrar';
@@ -628,7 +676,7 @@ function jumpToContact(coId,ctId){
   state.selected=coId;
   document.getElementById('execSearch').value='';
   document.getElementById('execResults').classList.remove('open');
-  render();
+  setView('map');
   setTimeout(function(){openContactModal(coId,ctId)},100);
 }
 
@@ -733,8 +781,9 @@ function renderContent(){
         +'<div class="n-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
         +'<div class="n-role" style="min-height:initial;margin-bottom:0">'+escapeHtml(ct.role||'—')+'</div>'
         +'</div></div>'
-        +'<div class="n-foot">'
-        +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'+gapHtml
+        var tagHtml=ct.tag?'<span class="tag-badge tag-'+ct.tag+'">'+ct.tag+'</span>':'';
+        html+='<div class="n-foot">'
+        +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'+tagHtml+gapHtml
         +(chans.length?'<div class="n-chans">'+chans.join('')+'</div>':'<span></span>')
         +'</div>'
         +'</div>'
@@ -745,7 +794,136 @@ function renderContent(){
   el.innerHTML=html;
 }
 
-function render(){renderSidebar();renderContent()}
+var _view='dash';
+function setView(v){
+  _view=v;
+  document.getElementById('vt-dash').classList.toggle('active',v==='dash');
+  document.getElementById('vt-map').classList.toggle('active',v==='map');
+  document.getElementById('dashView').style.display=v==='dash'?'':'none';
+  document.getElementById('mapView').style.display=v==='map'?'':'none';
+  render();
+}
+function render(){
+  if(_view==='dash')renderDashboard();
+  renderSidebar();renderContent();
+}
+
+function renderDashboard(){
+  var el=document.getElementById('dashView');
+  var today=new Date();today.setHours(0,0,0,0);
+  var dayNames=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+
+  // Agenda: collect all nextDate actions across companies
+  var actions=[];
+  state.companies.forEach(function(co){
+    co.contacts.forEach(function(ct){
+      if(!ct.nextDate)return;
+      var d=new Date(ct.nextDate+'T00:00:00');
+      var diff=Math.floor((d-today)/86400000);
+      if(diff<0||diff>14)return;
+      actions.push({date:ct.nextDate,diff:diff,day:dayNames[d.getDay()],ct:ct,co:co});
+    });
+  });
+  actions.sort(function(a,b){return a.diff-b.diff||a.ct.name.localeCompare(b.ct.name)});
+
+  // Agenda HTML
+  var agendaHtml='';
+  if(actions.length>0){
+    agendaHtml='<div class="agenda"><h3>📅 Agenda — Próximos 14 dias</h3>';
+    var byDay={};
+    actions.forEach(function(a){
+      var key=a.date;
+      if(!byDay[key])byDay[key]=[];
+      byDay[key].push(a);
+    });
+    Object.keys(byDay).sort().forEach(function(k){
+      var items=byDay[k];
+      var dp=k.split('-');
+      var label=items[0].day+' '+dp[2]+'/'+dp[1]+(items[0].diff===0?' (hoje)':items[0].diff===1?' (amanhã)':'');
+      agendaHtml+='<div class="agenda-day"><div class="day-label">'+label+'</div>';
+      items.forEach(function(a){
+        agendaHtml+='<div class="agenda-item" onclick="setView(\'map\');selectCompany(\''+a.co.id+'\');openContactModal(\''+a.co.id+'\',\''+a.ct.id+'\')">'
+          +'<span class="ai-co">'+escapeHtml(a.co.name)+'</span>'
+          +'<span class="ai-name">'+escapeHtml(a.ct.name)+'</span>'
+          +'<span class="ai-action">'+escapeHtml(a.ct.next||'—')+'</span>'
+          +'<span class="status st-'+a.ct.status+'" style="font-size:9px">'+a.ct.status+'</span>'
+          +'</div>';
+      });
+      agendaHtml+='</div>';
+    });
+    agendaHtml+='</div>';
+  }
+
+  // Company cards
+  var cardsHtml='<div class="dash-grid">';
+  var sorted=state.companies.slice().sort(function(a,b){
+    var aHot=a.contacts.filter(function(x){return x.status==='hot'||x.status==='booked'}).length;
+    var bHot=b.contacts.filter(function(x){return x.status==='hot'||x.status==='booked'}).length;
+    return bHot-aHot||b.contacts.length-a.contacts.length;
+  });
+  sorted.forEach(function(co){
+    if(co.contacts.length===0)return;
+    var cov={c:0,d:0,o:0};
+    var stats={hot:0,warm:0,cold:0,booked:0,won:0,lost:0};
+    var gaps=0;
+    var nextAction=null;
+    co.contacts.forEach(function(ct){
+      cov[ct.layer]++;
+      stats[ct.status]=(stats[ct.status]||0)+1;
+      if(ct.lastDate&&ct.cadence){
+        var last=new Date(ct.lastDate+'T00:00:00');
+        var days=Math.floor((today-last)/86400000);
+        if(days>ct.cadence)gaps++;
+      }
+      if(ct.nextDate&&ct.next){
+        var nd=new Date(ct.nextDate+'T00:00:00');
+        if(!nextAction||nd<nextAction.d)nextAction={d:nd,text:ct.next,name:ct.name,date:ct.nextDate};
+      }
+    });
+    var logoStyle=co.logoUrl?"background-image:url('"+escapeHtml(co.logoUrl)+"');background-size:contain":'';
+    var logoText=co.logoUrl?'':escapeHtml(co.name).substring(0,6);
+    cardsHtml+='<div class="dash-card" onclick="setView(\'map\');selectCompany(\''+co.id+'\')">'
+      +'<div class="dc-head"><div class="dc-logo" style="'+logoStyle+'">'+logoText+'</div>'
+      +'<div class="dc-title">'+escapeHtml(co.name)+'</div></div>'
+      +'<div class="dc-meta">'+escapeHtml(co.sector||'')+' · '+escapeHtml(co.tier||'')+' · '+co.contacts.length+' contatos</div>'
+      +'<div class="dc-bars">';
+    for(var i=0;i<cov.c;i++)cardsHtml+='<div class="dc-bar c"></div>';
+    for(var j=0;j<cov.d;j++)cardsHtml+='<div class="dc-bar d"></div>';
+    for(var k=0;k<cov.o;k++)cardsHtml+='<div class="dc-bar o"></div>';
+    cardsHtml+='</div><div class="dc-stats">';
+    if(stats.hot)cardsHtml+='<div class="dc-stat" style="background:#fee4d6"><b>'+stats.hot+'</b>hot</div>';
+    if(stats.warm)cardsHtml+='<div class="dc-stat" style="background:#fef3c7"><b>'+stats.warm+'</b>warm</div>';
+    if(stats.booked)cardsHtml+='<div class="dc-stat" style="background:#dbeafe"><b>'+stats.booked+'</b>agendado</div>';
+    if(stats.won)cardsHtml+='<div class="dc-stat" style="background:#d1fae5"><b>'+stats.won+'</b>won</div>';
+    if(gaps)cardsHtml+='<div class="dc-stat" style="background:#fee2e2"><b>'+gaps+'</b>gaps</div>';
+    cardsHtml+='</div>';
+    if(nextAction){
+      var dp=nextAction.date.split('-');
+      cardsHtml+='<div class="dc-next">⏰ <div><b>'+escapeHtml(nextAction.name)+'</b> — '+escapeHtml(nextAction.text)+' ('+dp[2]+'/'+dp[1]+')</div></div>';
+    }
+    cardsHtml+='</div>';
+  });
+  cardsHtml+='</div>';
+
+  // Summary KPIs
+  var totalCo=state.companies.length;
+  var totalCt=state.companies.reduce(function(s,c){return s+c.contacts.length},0);
+  var totalHot=state.companies.reduce(function(s,c){return s+c.contacts.filter(function(x){return x.status==='hot'||x.status==='booked'}).length},0);
+  var totalGaps=0;
+  state.companies.forEach(function(co){co.contacts.forEach(function(ct){
+    if(ct.lastDate&&ct.cadence){var d=Math.floor((today-new Date(ct.lastDate+'T00:00:00'))/86400000);if(d>ct.cadence)totalGaps++}
+  })});
+
+  var kpisHtml='<div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap">'
+    +'<div class="kpi" style="flex:1;min-width:120px"><div class="k-lbl" style="font-size:10px;color:var(--muted)">Empresas</div><div style="font-size:24px;font-weight:800">'+totalCo+'</div></div>'
+    +'<div class="kpi" style="flex:1;min-width:120px"><div class="k-lbl" style="font-size:10px;color:var(--muted)">Contatos</div><div style="font-size:24px;font-weight:800">'+totalCt+'</div></div>'
+    +'<div class="kpi" style="flex:1;min-width:120px;background:#fff7ed;border-color:#fed7aa"><div class="k-lbl" style="font-size:10px;color:var(--acc)">Hot + Agendado</div><div style="font-size:24px;font-weight:800;color:var(--acc)">'+totalHot+'</div></div>'
+    +'<div class="kpi" style="flex:1;min-width:120px"><div class="k-lbl" style="font-size:10px;color:var(--muted)">Ações 14d</div><div style="font-size:24px;font-weight:800">'+actions.length+'</div></div>'
+    +(totalGaps?'<div class="kpi" style="flex:1;min-width:120px;background:#fef2f2;border-color:#fecaca"><div class="k-lbl" style="font-size:10px;color:var(--bad)">Gaps</div><div style="font-size:24px;font-weight:800;color:var(--bad)">'+totalGaps+'</div></div>':'')
+    +'</div>';
+
+  el.innerHTML=kpisHtml+agendaHtml+'<h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">Empresas por calor</h3>'+cardsHtml;
+}
 
 function selectCompany(id){state.selected=id;save();render()}
 
@@ -809,6 +987,7 @@ function openContactModal(companyId,contactId,defaultLayer){
   document.getElementById('cn-photo').value=ct.photoUrl||'';
   updateAvatarPreview(ct);
   document.getElementById('cn-status').value=ct.status||'cold';
+  document.getElementById('cn-tag').value=ct.tag||'';
   document.getElementById('cn-next').value=ct.next||'';
   document.getElementById('cn-next-date').value=ct.nextDate||'';
   document.getElementById('cn-last-date').value=ct.lastDate||'';
@@ -830,6 +1009,7 @@ function saveContact(){
     linkedin:document.getElementById('cn-linkedin').value.trim(),
     photoUrl:document.getElementById('cn-photo').value.trim(),
     status:document.getElementById('cn-status').value,
+    tag:document.getElementById('cn-tag').value,
     next:document.getElementById('cn-next').value.trim(),
     nextDate:document.getElementById('cn-next-date').value,
     lastDate:document.getElementById('cn-last-date').value,
