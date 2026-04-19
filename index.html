@@ -593,7 +593,7 @@ async function doLogin(){
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='flex';
     setStatus('carregado de '+best.src+' ('+best.count+' empresas)');
-    setView('dash');
+    setView('map');
     render();
   }catch(e){
     errEl.textContent=e.message||'Erro ao entrar';
