@@ -1080,11 +1080,12 @@ function exportPDF(){
 
   var html='<!doctype html><html><head><meta charset="utf-8"><title>Mapa de Relacionamento | '+escapeHtml(c.name)+'</title>';
   html+='<style>';
-  html+='*{box-sizing:border-box;margin:0;padding:0}';
+  html+='*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}';
   html+='body{font-family:-apple-system,BlinkMacSystemFont,"Inter",sans-serif;background:#fff;color:#1a2233;padding:32px 40px}';
   html+='@media print{body{padding:16px}@page{size:landscape;margin:12mm}}';
   html+='.header{display:flex;align-items:center;gap:16px;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #ff6b35}';
-  html+='.header .logo{width:72px;height:72px;border-radius:10px;background:#f1f3f7;border:1px solid #e4e7ee;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#667085;text-align:center;background-size:contain;background-position:center;background-repeat:no-repeat;flex-shrink:0}';
+  html+='.header .logo{width:72px;height:72px;border-radius:10px;background:#f1f3f7;border:1px solid #e4e7ee;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#667085;text-align:center;flex-shrink:0;overflow:hidden;position:relative}';
+  html+='.header .logo img{width:100%;height:100%;object-fit:contain}';
   html+='.header h1{font-size:24px;margin:0}.header .meta{font-size:12px;color:#667085;margin-top:4px}';
   html+='.kpis{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}';
   html+='.kpi{background:#f8fafc;border:1px solid #e4e7ee;border-radius:8px;padding:8px 14px;font-size:12px}.kpi b{font-size:16px;color:#ff6b35;margin-right:4px}';
@@ -1096,7 +1097,8 @@ function exportPDF(){
   html+='.cards{display:flex;flex-wrap:wrap;gap:10px;padding:14px}';
   html+='.card{width:180px;border:1px solid #e4e7ee;border-radius:8px;padding:10px;background:#fff;break-inside:avoid;page-break-inside:avoid}';
   html+='.card-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}';
-  html+='.avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;background-size:cover;background-position:center}';
+  html+='.avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;overflow:hidden;position:relative}';
+  html+='.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}';
   html+='.card-name{font-weight:700;font-size:12px;line-height:1.2}.card-role{font-size:10px;color:#667085;margin-top:2px}';
   html+='.card-foot{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}';
   html+='.badge{font-size:8px;padding:2px 6px;border-radius:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#fff}';
@@ -1104,10 +1106,9 @@ function exportPDF(){
   html+='</style></head><body>';
 
   // Header
-  var logoStyle=c.logoUrl?'background-image:url('+c.logoUrl+')':'';
-  var logoText=c.logoUrl?'':escapeHtml(c.name).substring(0,8);
+  var logoInner=c.logoUrl?'<img src="'+escapeHtml(c.logoUrl)+'"/>':escapeHtml(c.name).substring(0,8);
   html+='<div class="header">';
-  html+='<div class="logo" style="'+logoStyle+'">'+logoText+'</div>';
+  html+='<div class="logo">'+logoInner+'</div>';
   html+='<div><h1>'+escapeHtml(c.name)+'</h1>';
   html+='<div class="meta">'+escapeHtml(c.sector||'')+' · '+escapeHtml(c.tier||'')+' · '+c.contacts.length+' contatos</div></div></div>';
 
@@ -1132,10 +1133,10 @@ function exportPDF(){
     html+='<div class="layer-head"><h3><span class="dot" style="background:'+layerColors[layer]+'"></span>'+layerNames[layer]+'</h3><span class="count">'+list.length+' contato(s)</span></div>';
     html+='<div class="cards">';
     list.forEach(function(ct){
-      var avStyle=ct.photoUrl?'background-image:url('+ct.photoUrl+');background-size:cover':'background-color:'+layerColors[layer];
-      var ini=ct.photoUrl?'':initials(ct.name);
+      var avInner=ct.photoUrl?'<img src="'+escapeHtml(ct.photoUrl)+'"/>':initials(ct.name);
+      var avBg=ct.photoUrl?'':'background-color:'+layerColors[layer];
       html+='<div class="card" style="border-top:3px solid '+layerColors[layer]+'">';
-      html+='<div class="card-head"><div class="avatar" style="'+avStyle+'">'+ini+'</div>';
+      html+='<div class="card-head"><div class="avatar" style="'+avBg+'">'+avInner+'</div>';
       html+='<div><div class="card-name">'+escapeHtml(ct.name)+'</div><div class="card-role">'+escapeHtml(ct.role||'')+'</div></div></div>';
       html+='<div class="card-foot">';
       html+='<span class="badge" style="background:'+statusColors[ct.status||'cold']+'">'+escapeHtml(ct.status||'cold')+'</span>';
@@ -1159,7 +1160,13 @@ function exportPDF(){
   var w=window.open('','_blank');
   w.document.write(html);
   w.document.close();
-  setTimeout(function(){w.print()},500);
+  var imgs=w.document.querySelectorAll('img');
+  var loaded=0;var total=imgs.length;
+  if(total===0){setTimeout(function(){w.print()},300);return}
+  imgs.forEach(function(img){
+    if(img.complete){loaded++;if(loaded>=total)setTimeout(function(){w.print()},300)}
+    else{img.onload=img.onerror=function(){loaded++;if(loaded>=total)setTimeout(function(){w.print()},300)}}
+  });
 }
 
 function exportData(){
