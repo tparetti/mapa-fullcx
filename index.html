@@ -27,15 +27,29 @@
   .btn.sm{padding:4px 10px;font-size:12px}
   .btn.ghost{background:transparent}
   .btn.danger{color:#dc2626}.btn.danger:hover{border-color:#dc2626}
-  main{flex:1;display:grid;grid-template-columns:280px 1fr 360px;gap:0;min-height:0;transition:grid-template-columns .2s}
-  main.pb-collapsed{grid-template-columns:280px 1fr 36px}
-  main.pb-collapsed .playbook>*:not(.pb-toggle){display:none}
-  main.pb-collapsed .playbook{padding:8px 4px;align-items:center}
-  @media(max-width:1100px){main{grid-template-columns:240px 1fr 36px}main.pb-collapsed{grid-template-columns:240px 1fr 36px}}
-  @media(max-width:700px){main{grid-template-columns:1fr}.sidebar{display:none}.playbook{display:none}}
-  .pb-toggle{position:absolute;top:8px;left:8px;background:#fff;border:1px solid var(--line);border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--muted);z-index:5}
-  .pb-toggle:hover{border-color:var(--acc);color:var(--acc)}
-  main.pb-collapsed .pb-toggle{position:static}
+  main{flex:1;display:grid;grid-template-columns:260px 1fr;gap:0;min-height:0}
+  @media(max-width:768px){
+    main{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .sidebar.mobile-open{display:block;position:fixed;inset:0;z-index:40;background:var(--panel);padding:12px;overflow:auto}
+    .content{padding:12px 14px !important}
+    .node{width:160px !important}
+    .company-header{flex-direction:column;align-items:flex-start}
+    .kpis{flex-wrap:wrap}
+    .kpi{min-width:0;flex:1 1 45%}
+    header{padding:10px 12px}
+    header h1{font-size:14px}
+    .hdr-actions{gap:4px}
+    .btn.sm{padding:3px 8px;font-size:11px}
+    .exec-search input{width:180px;font-size:12px}
+    .exec-results{width:min(340px,90vw);right:10px}
+    .logo-box{width:60px !important;height:60px !important}
+    .dash{padding:12px}
+    .dash-grid{grid-template-columns:1fr !important}
+    .agenda-item{flex-wrap:wrap;gap:4px}
+    .agenda-item .ai-co{min-width:auto}
+    .agenda-item .ai-name{min-width:auto}
+  }
   .sidebar{border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:12px}
   .sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:10px 8px 8px}
   .company-item{padding:10px 10px 10px 8px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;display:flex;align-items:center;gap:6px;position:relative}
@@ -143,13 +157,9 @@
   .st-booked{background:#dbeafe;color:#1e40af}
   .st-won{background:#d1fae5;color:#065f46}
   .st-lost{background:#fee2e2;color:#991b1b}
-  .playbook{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:14px;position:relative;display:flex;flex-direction:column}
-  .playbook h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:0 0 8px}
-  .pb-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;font-size:12.5px}
-  .pb-card h4{margin:0 0 6px;font-size:13px;display:flex;align-items:center;gap:6px}
-  .pb-card ul{margin:4px 0 0;padding-left:18px}
-  .pb-card li{margin-bottom:3px}
-  .pb-card .ex{background:var(--panel2);border-left:3px solid var(--acc);padding:8px 10px;border-radius:4px;margin-top:6px;font-size:11.5px;color:#334155;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .mob-menu-btn{display:none;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:16px;cursor:pointer;color:var(--ink)}
+  @media(max-width:768px){.mob-menu-btn{display:inline-block}}
+  .mob-close{position:absolute;top:10px;right:14px;font-size:20px;cursor:pointer;color:var(--muted);background:none;border:none}
   .toggle{cursor:pointer;user-select:none}
   .modal{position:fixed;inset:0;background:rgba(16,24,40,.5);display:none;align-items:center;justify-content:center;z-index:50}
   .modal.open{display:flex}
@@ -235,6 +245,7 @@
     <h1>Mapa de Relacionamento <small>Full CX Mutant · Estratégia Enterprise</small></h1>
   </div>
   <div class="hdr-actions">
+    <button class="mob-menu-btn" onclick="toggleMobileSidebar()" title="Empresas">☰</button>
     <div class="view-toggle">
       <button class="active" id="vt-dash" onclick="setView('dash')">Dashboard</button>
       <button id="vt-map" onclick="setView('map')">Mapa</button>
@@ -255,117 +266,18 @@
 
 <div class="dash" id="dashView" style="display:none"></div>
 <main id="mapView">
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin:6px 6px 10px">
       <h3 style="margin:0">Empresas Alvo</h3>
       <button class="btn sm primary" onclick="openCompanyModal()">+ Empresa</button>
     </div>
+    <button class="mob-close" onclick="toggleMobileSidebar()" style="display:none" id="sidebarClose">✕</button>
     <div class="search-box"><input type="text" id="companySearch" placeholder="Buscar empresa..." oninput="filterCompanies()"/></div>
     <div id="companyList"></div>
   </aside>
 
   <section class="content" id="content"></section>
 
-  <aside class="playbook">
-    <button class="pb-toggle" onclick="togglePlaybook()" title="Expandir/Recolher painel" id="pbToggle">›</button>
-    <div class="tabs">
-      <div class="tab active" data-tab="play" onclick="setTab('play')">Playbook</div>
-      <div class="tab" data-tab="cadence" onclick="setTab('cadence')">Cadência</div>
-      <div class="tab" data-tab="msgs" onclick="setTab('msgs')">Mensagens</div>
-    </div>
-    <div id="tab-play">
-      <div class="approach-box"><b>Ângulo central:</b> Full CX Mutant = orquestração voz + digital + humano com IA Generativa (IAM), pricing win-win por outcome (não headcount). Cases provam −17% budget, +31pp FCR, 85% resolutividade.</div>
-
-      <div class="pb-card">
-        <h4><span class="dot" style="background:var(--c)"></span>C-Level — CEO/CFO/COO</h4>
-        <b>Objetivo:</b> sponsor executivo e endosso estratégico.<br>
-        <b>Dor a acionar:</b> previsibilidade de custo, visibilidade end-to-end, ROI sobre IA.<br>
-        <ul>
-          <li>Narrativa de <b>business outcome</b> (saving, retenção, NPS)</li>
-          <li>Benchmarks de mercado (Certisign, C&A Pay, Banco Pan)</li>
-          <li>Conversa curta (25 min) com case 1:1 setor</li>
-        </ul>
-      </div>
-
-      <div class="pb-card">
-        <h4><span class="dot" style="background:var(--d)"></span>Diretoria — CX/Ops/TI/CCO</h4>
-        <b>Objetivo:</b> champion operacional e dono do budget de CX.<br>
-        <b>Dor a acionar:</b> fragmentação de canais, rechamadas, dependência de headcount.<br>
-        <ul>
-          <li>Demo IAM + arquitetura unificada (slide 7 e 8)</li>
-          <li>Workshop de jornada (voz + digital)</li>
-          <li>Proposta de POC/MVP em 30-60 dias</li>
-        </ul>
-      </div>
-
-      <div class="pb-card">
-        <h4><span class="dot" style="background:var(--o)"></span>Operação — Gerentes/Coords/Analistas</h4>
-        <b>Objetivo:</b> validadores técnicos e detratores silenciosos convertidos em aliados.<br>
-        <b>Dor a acionar:</b> TMA alto, falta de contexto na transferência, SLA apertado.<br>
-        <ul>
-          <li>Hands-on com demos (+55 11 5039-6837 etc)</li>
-          <li>Troca técnica sobre integração com CRM/CCaaS atual</li>
-          <li>Visita ao Barra Funda (infra Mutant)</li>
-        </ul>
-      </div>
-    </div>
-
-    <div id="tab-cadence" style="display:none">
-      <div class="pb-card">
-        <h4>Cadência padrão — 21 dias</h4>
-        <div class="cadence-step"><span class="day">D1</span><div><b>LinkedIn connect</b> — nota curta, referência a case do setor, sem pitch</div></div>
-        <div class="cadence-step"><span class="day">D2</span><div><b>E-mail 1</b> — provocação com 1 dado de benchmark + pergunta aberta</div></div>
-        <div class="cadence-step"><span class="day">D5</span><div><b>WhatsApp</b> (se tiver celular) — áudio de 40s pessoal</div></div>
-        <div class="cadence-step"><span class="day">D8</span><div><b>E-mail 2</b> — link demo IAM (telefone) + 1 case PDF anexo</div></div>
-        <div class="cadence-step"><span class="day">D12</span><div><b>LinkedIn post/comment</b> — engajar em conteúdo do contato</div></div>
-        <div class="cadence-step"><span class="day">D15</span><div><b>E-mail 3</b> — "checking in" com 3 bullets de valor + proposta de 25min</div></div>
-        <div class="cadence-step"><span class="day">D18</span><div><b>Ligação</b> — celular ou ramal, script curto, objetivo: agenda</div></div>
-        <div class="cadence-step"><span class="day">D21</span><div><b>E-mail break-up</b> — "fecho o loop", gatilho escassez/FOMO</div></div>
-      </div>
-      <div class="pb-card">
-        <h4>Regras</h4>
-        <ul>
-          <li>Nunca 2 canais no mesmo dia</li>
-          <li>C-level: menos frequência, mais densidade (executive brief PDF)</li>
-          <li>Operação: mais volume, mais técnico</li>
-          <li>Se respondeu: sai da cadência automática, entra em nurturing 1:1</li>
-          <li>Registrar toda interação no card do contato</li>
-        </ul>
-      </div>
-    </div>
-
-    <div id="tab-msgs" style="display:none">
-      <div class="pb-card">
-        <h4>LinkedIn connect (C-level)</h4>
-        <div class="ex">Olá [Nome], Head of Sales na Mutant. Acabamos de rodar um projeto de Full CX com a [Case do setor] que cortou −17% do budget de atendimento e subiu FCR em 31pp. Quero trocar uma ideia sobre o que estamos vendo no setor de [segmento]. Conecta?</div>
-      </div>
-      <div class="pb-card">
-        <h4>E-mail 1 (Diretoria CX)</h4>
-        <div class="ex">Assunto: 67% de digitalização em voz na [setor] — [Empresa]?
-
-[Nome], tudo bem?
-
-A C&A Pay saiu de URA tradicional pra 67% de digitalização em voz em 60 dias, com IAM (IA Generativa) no topo da URA. Custo de atendimento caiu 18%.
-
-Vendo o volume de atendimento da [Empresa], aposto que tem espaço parecido. Topa 25min pra eu te mostrar a arquitetura?
-
-Thiago Paretti — Head of Sales, Mutant</div>
-      </div>
-      <div class="pb-card">
-        <h4>WhatsApp áudio (Operação)</h4>
-        <div class="ex">Fala [Nome], Thiago da Mutant. Peguei seu contato via [fonte]. Rápido: a gente tem 4 demos em telefone pra você testar IA Gen na prática (Nubank, Enel, Mutant Educa, Banco Pan). Manda um OK que te passo os números. 40 segundos do seu tempo.</div>
-      </div>
-      <div class="pb-card">
-        <h4>Break-up e-mail (D21)</h4>
-        <div class="ex">[Nome], fechando o loop aqui. Imagino que não seja prioridade agora — tudo bem. Deixo 2 coisas caso mudem de cenário:
-
-1. Case YDUQS (retenção): +15% saving em 3 meses
-2. Demo ao vivo do IAM: +55 11 5039-6837
-
-Qualquer coisa, é só responder. Abraço.</div>
-      </div>
-    </div>
-  </aside>
 </main>
 
 <div class="modal" id="companyModal">
@@ -926,7 +838,7 @@ function renderDashboard(){
   el.innerHTML=kpisHtml+agendaHtml+'<h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">Empresas por calor</h3>'+cardsHtml;
 }
 
-function selectCompany(id){state.selected=id;save();render()}
+function selectCompany(id){state.selected=id;save();closeMobileSidebar();render()}
 
 function openCompanyModal(id){
   editingCompany=id||null;
@@ -1169,21 +1081,17 @@ function importData(){
   };inp.click();
 }
 
-function togglePlaybook(){
-  var m=document.querySelector('main');
-  m.classList.toggle('pb-collapsed');
-  var collapsed=m.classList.contains('pb-collapsed');
-  document.getElementById('pbToggle').textContent=collapsed?'‹':'›';
-  localStorage.setItem('fullcx_pb_collapsed',collapsed?'1':'0');
+function toggleMobileSidebar(){
+  var sb=document.getElementById('sidebar');
+  var isOpen=sb.classList.contains('mobile-open');
+  sb.classList.toggle('mobile-open');
+  document.getElementById('sidebarClose').style.display=isOpen?'none':'block';
 }
-(function initPlaybookState(){
-  if(localStorage.getItem('fullcx_pb_collapsed')==='1'){
-    document.addEventListener('DOMContentLoaded',function(){
-      var m=document.querySelector('main');
-      if(m){m.classList.add('pb-collapsed');document.getElementById('pbToggle').textContent='‹'}
-    });
-  }
-})();
+function closeMobileSidebar(){
+  var sb=document.getElementById('sidebar');
+  sb.classList.remove('mobile-open');
+  document.getElementById('sidebarClose').style.display='none';
+}
 
 function updateAvatarPreview(ct){
   var el=document.getElementById('cn-avatar-preview');
