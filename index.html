@@ -254,6 +254,7 @@
     <button class="btn sm" onclick="openCompanyModal()">+ Empresa</button>
     <button class="btn sm ghost" onclick="exportData()">Exportar</button>
     <button class="btn sm ghost" onclick="importData()">Importar</button>
+    <button class="btn sm ghost" onclick="exportPDF()" title="Exportar empresa atual como PDF">📄 PDF</button>
     <div style="position:relative">
       <div class="exec-search"><input type="text" id="execSearch" placeholder="Buscar executivo..." oninput="searchExec()" onfocus="searchExec()" autocomplete="off"/></div>
       <div class="exec-results" id="execResults"></div>
@@ -1066,6 +1067,99 @@ function setTab(t){
   document.getElementById('tab-play').style.display=t==='play'?'':'none';
   document.getElementById('tab-cadence').style.display=t==='cadence'?'':'none';
   document.getElementById('tab-msgs').style.display=t==='msgs'?'':'none';
+}
+
+function exportPDF(){
+  var c=state.companies.find(function(x){return x.id===state.selected});
+  if(!c){alert('Selecione uma empresa primeiro');return}
+
+  var layerNames={c:'C-Level',d:'Diretoria',o:'Operação'};
+  var layerColors={c:'#dc2626',d:'#d97706',o:'#059669'};
+  var statusColors={cold:'#64748b',warm:'#d97706',hot:'#ff6b35',booked:'#2563eb',won:'#059669',lost:'#dc2626'};
+  var tagColors={champion:'#059669',decisor:'#2563eb',influenciador:'#7c3aed',detrator:'#dc2626',neutro:'#94a3b8'};
+
+  var html='<!doctype html><html><head><meta charset="utf-8"><title>Mapa de Relacionamento | '+escapeHtml(c.name)+'</title>';
+  html+='<style>';
+  html+='*{box-sizing:border-box;margin:0;padding:0}';
+  html+='body{font-family:-apple-system,BlinkMacSystemFont,"Inter",sans-serif;background:#fff;color:#1a2233;padding:32px 40px}';
+  html+='@media print{body{padding:16px}@page{size:landscape;margin:12mm}}';
+  html+='.header{display:flex;align-items:center;gap:16px;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #ff6b35}';
+  html+='.header .logo{width:72px;height:72px;border-radius:10px;background:#f1f3f7;border:1px solid #e4e7ee;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#667085;text-align:center;background-size:contain;background-position:center;background-repeat:no-repeat;flex-shrink:0}';
+  html+='.header h1{font-size:24px;margin:0}.header .meta{font-size:12px;color:#667085;margin-top:4px}';
+  html+='.kpis{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}';
+  html+='.kpi{background:#f8fafc;border:1px solid #e4e7ee;border-radius:8px;padding:8px 14px;font-size:12px}.kpi b{font-size:16px;color:#ff6b35;margin-right:4px}';
+  html+='.layer{margin-bottom:20px;border:1px solid #e4e7ee;border-radius:10px;overflow:hidden;break-inside:avoid}';
+  html+='.layer-head{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:#f8fafc}';
+  html+='.layer-head h3{font-size:14px;margin:0;display:flex;align-items:center;gap:8px}';
+  html+='.layer-head .dot{width:10px;height:10px;border-radius:50%;display:inline-block}';
+  html+='.layer-head .count{font-size:11px;color:#667085;background:#e8ecf2;padding:2px 8px;border-radius:10px}';
+  html+='.cards{display:flex;flex-wrap:wrap;gap:10px;padding:14px}';
+  html+='.card{width:180px;border:1px solid #e4e7ee;border-radius:8px;padding:10px;background:#fff;break-inside:avoid;page-break-inside:avoid}';
+  html+='.card-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}';
+  html+='.avatar{width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;background-size:cover;background-position:center}';
+  html+='.card-name{font-weight:700;font-size:12px;line-height:1.2}.card-role{font-size:10px;color:#667085;margin-top:2px}';
+  html+='.card-foot{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}';
+  html+='.badge{font-size:8px;padding:2px 6px;border-radius:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#fff}';
+  html+='.card-contact{font-size:9px;color:#667085;margin-top:4px;line-height:1.4}';
+  html+='</style></head><body>';
+
+  // Header
+  var logoStyle=c.logoUrl?'background-image:url('+c.logoUrl+')':'';
+  var logoText=c.logoUrl?'':escapeHtml(c.name).substring(0,8);
+  html+='<div class="header">';
+  html+='<div class="logo" style="'+logoStyle+'">'+logoText+'</div>';
+  html+='<div><h1>'+escapeHtml(c.name)+'</h1>';
+  html+='<div class="meta">'+escapeHtml(c.sector||'')+' · '+escapeHtml(c.tier||'')+' · '+c.contacts.length+' contatos</div></div></div>';
+
+  // KPIs
+  var cov={c:0,d:0,o:0};var sts={};
+  c.contacts.forEach(function(ct){cov[ct.layer]++;sts[ct.status]=(sts[ct.status]||0)+1});
+  html+='<div class="kpis">';
+  html+='<div class="kpi"><b>'+c.contacts.length+'</b>contatos</div>';
+  html+='<div class="kpi"><b>'+cov.c+'</b>C-Level</div>';
+  html+='<div class="kpi"><b>'+cov.d+'</b>Diretoria</div>';
+  html+='<div class="kpi"><b>'+cov.o+'</b>Operação</div>';
+  if(sts.hot)html+='<div class="kpi"><b>'+sts.hot+'</b>hot</div>';
+  if(sts.warm)html+='<div class="kpi"><b>'+sts.warm+'</b>warm</div>';
+  if(sts.booked)html+='<div class="kpi"><b>'+sts.booked+'</b>agendado</div>';
+  html+='</div>';
+
+  // Layers
+  ['c','d','o'].forEach(function(layer){
+    var list=c.contacts.filter(function(x){return x.layer===layer});
+    if(list.length===0)return;
+    html+='<div class="layer">';
+    html+='<div class="layer-head"><h3><span class="dot" style="background:'+layerColors[layer]+'"></span>'+layerNames[layer]+'</h3><span class="count">'+list.length+' contato(s)</span></div>';
+    html+='<div class="cards">';
+    list.forEach(function(ct){
+      var avStyle=ct.photoUrl?'background-image:url('+ct.photoUrl+');background-size:cover':'background-color:'+layerColors[layer];
+      var ini=ct.photoUrl?'':initials(ct.name);
+      html+='<div class="card" style="border-top:3px solid '+layerColors[layer]+'">';
+      html+='<div class="card-head"><div class="avatar" style="'+avStyle+'">'+ini+'</div>';
+      html+='<div><div class="card-name">'+escapeHtml(ct.name)+'</div><div class="card-role">'+escapeHtml(ct.role||'')+'</div></div></div>';
+      html+='<div class="card-foot">';
+      html+='<span class="badge" style="background:'+statusColors[ct.status||'cold']+'">'+escapeHtml(ct.status||'cold')+'</span>';
+      if(ct.tag)html+='<span class="badge" style="background:'+(tagColors[ct.tag]||'#94a3b8')+'">'+escapeHtml(ct.tag)+'</span>';
+      html+='</div>';
+      var contact=[];
+      if(ct.phone)contact.push(ct.phone);
+      if(ct.email)contact.push(ct.email);
+      if(ct.next){var n=ct.next;if(ct.nextDate){var dp=ct.nextDate.split('-');n+=' ('+dp[2]+'/'+dp[1]+')'}contact.push('▶ '+n)}
+      if(contact.length)html+='<div class="card-contact">'+contact.map(escapeHtml).join('<br>')+'</div>';
+      html+='</div>';
+    });
+    html+='</div></div>';
+  });
+
+  html+='<div style="margin-top:20px;padding-top:12px;border-top:1px solid #e4e7ee;font-size:9px;color:#94a3b8;display:flex;justify-content:space-between">';
+  html+='<span>Mapa de Relacionamento | '+escapeHtml(c.name)+'</span>';
+  html+='<span>Gerado em '+new Date().toLocaleDateString('pt-BR')+'</span></div>';
+  html+='</body></html>';
+
+  var w=window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function(){w.print()},500);
 }
 
 function exportData(){
