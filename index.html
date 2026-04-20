@@ -171,6 +171,7 @@
   .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(255,107,53,.15)}
   .field textarea{resize:vertical;min-height:60px}
   .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:500px){.field-row{grid-template-columns:1fr}}
   .modal-actions{display:flex;justify-content:space-between;gap:8px;margin-top:14px}
   .empty{text-align:center;padding:40px 20px;color:var(--muted)}
   .empty h2{color:var(--ink);margin-bottom:8px}
