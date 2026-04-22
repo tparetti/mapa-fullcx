@@ -142,6 +142,12 @@
   .tag-influenciador{background:#f3e8ff;color:#6b21a8}
   .tag-detrator{background:#fee2e2;color:#991b1b}
   .tag-neutro{background:var(--panel2);color:var(--muted)}
+  .bday-badge{font-size:9px;padding:2px 6px;border-radius:8px;font-weight:700;background:#fce7f3;color:#be185d;margin-left:4px}
+  .bday-alert{background:linear-gradient(135deg,#fce7f3,#fff);border:1px solid #fbcfe8;border-radius:10px;padding:14px;margin-bottom:14px}
+  .bday-alert h3{margin:0 0 10px;font-size:14px;display:flex;align-items:center;gap:8px}
+  .bday-item{display:flex;gap:10px;align-items:center;padding:6px 0;font-size:12px;cursor:pointer;border-radius:4px;padding:4px 8px}
+  .bday-item:hover{background:rgba(190,24,93,.06)}
+  .bday-item .bi-date{color:#be185d;font-weight:700;min-width:50px}
   .node.empty-node:hover{border-color:var(--acc);color:var(--acc);transform:none;box-shadow:none}
   .row-acts{display:flex;gap:4px}
   .c-main{min-width:0}
@@ -259,6 +265,7 @@
       <div class="exec-search"><input type="text" id="execSearch" placeholder="Buscar executivo..." oninput="searchExec()" onfocus="searchExec()" autocomplete="off"/></div>
       <div class="exec-results" id="execResults"></div>
     </div>
+    <button class="btn sm" onclick="openBdayReport()" title="Aniversários próximos" id="bdayBtn">🎂</button>
     <button class="btn sm" onclick="openGapReport()" title="Ver contatos fora da meta">⚠️ Gaps</button>
     <span id="syncStatus" style="font-size:11px;color:var(--muted);align-self:center">sincronizado</span>
     <button class="btn sm ghost" onclick="pullNow()" title="Puxar do cloud">↻</button>
@@ -306,6 +313,7 @@
 </div>
 
 <div class="modal" id="gapModal"><div class="modal-box" style="width:min(800px,95vw)"></div></div>
+<div class="modal" id="bdayModal"><div class="modal-box" style="width:min(600px,95vw)"></div></div>
 
 <div class="modal" id="contactModal">
   <div class="modal-box">
@@ -355,6 +363,10 @@
     <div class="field-row">
       <div class="field"><label>Último contato</label><input id="cn-last-date" type="date"/></div>
       <div class="field"><label>Meta de frequência (dias)</label><input id="cn-cadence" type="number" min="1" placeholder="ex: 30"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Aniversário</label><input id="cn-birthday" type="date"/></div>
+      <div class="field"></div>
     </div>
     <div class="field"><label>Histórico de interações</label><textarea id="cn-history" autocomplete="off" placeholder="Uma por linha: 13/04 - LinkedIn connect aceito"></textarea></div>
     <div class="modal-actions">
@@ -675,6 +687,11 @@ function renderContent(){
       var nextLabel=ct.next||'';
       if(ct.nextDate){var dp=ct.nextDate.split('-');nextLabel+=(nextLabel?' · ':'')+dp[2]+'/'+dp[1]}
       if(nextLabel)chans.push('<span title="'+escapeHtml(nextLabel)+'">⏰</span>');
+      var bdayHtml='';
+      if(ct.birthday){
+        var bd=checkBirthday(ct.birthday);
+        if(bd)bdayHtml='<span class="bday-badge">'+bd+'</span>';
+      }
       var gapHtml='';
       if(ct.lastDate&&ct.cadence){
         var g=computeGap(ct.lastDate,ct.cadence);
@@ -701,7 +718,7 @@ function renderContent(){
         +'</div></div>'
         var tagHtml=ct.tag?'<span class="tag-badge tag-'+ct.tag+'">'+ct.tag+'</span>':'';
         html+='<div class="n-foot">'
-        +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'+tagHtml+gapHtml
+        +'<span class="status st-'+ct.status+'">'+ct.status+'</span>'+tagHtml+bdayHtml+gapHtml
         +(chans.length?'<div class="n-chans">'+chans.join('')+'</div>':'<span></span>')
         +'</div>'
         +'</div>'
@@ -724,6 +741,9 @@ function setView(v){
 function render(){
   if(_view==='dash')renderDashboard();
   renderSidebar();renderContent();
+  var bdays=getBirthdayAlerts();
+  var btn=document.getElementById('bdayBtn');
+  if(btn)btn.textContent=bdays.length>0?'🎂 '+bdays.length:'🎂';
 }
 
 function renderDashboard(){
@@ -770,6 +790,22 @@ function renderDashboard(){
       agendaHtml+='</div>';
     });
     agendaHtml+='</div>';
+  }
+
+  // Birthday alerts in dashboard
+  var bdayAlerts=getBirthdayAlerts().filter(function(a){return a.diff<=7});
+  var bdayHtml='';
+  if(bdayAlerts.length>0){
+    bdayHtml='<div class="bday-alert"><h3>🎂 Aniversários esta semana</h3>';
+    bdayAlerts.forEach(function(a){
+      var hl=a.diff===0?'font-weight:700;background:#fce7f3;border-radius:4px':'';
+      bdayHtml+='<div class="bday-item" style="'+hl+'" onclick="setView(\'map\');selectCompany(\''+a.co.id+'\');openContactModal(\''+a.co.id+'\',\''+a.ct.id+'\')">'
+        +'<span class="bi-date">'+a.date+'</span>'
+        +'<b style="flex:1">'+escapeHtml(a.ct.name)+'</b>'
+        +'<span style="color:var(--muted);font-size:11px">'+escapeHtml(a.co.name)+'</span>'
+        +'<span class="bday-badge">'+a.label+'</span></div>';
+    });
+    bdayHtml+='</div>';
   }
 
   // Company cards
@@ -840,7 +876,7 @@ function renderDashboard(){
     +(totalGaps?'<div class="kpi" style="flex:1;min-width:120px;background:#fef2f2;border-color:#fecaca"><div class="k-lbl" style="font-size:10px;color:var(--bad)">Gaps</div><div style="font-size:24px;font-weight:800;color:var(--bad)">'+totalGaps+'</div></div>':'')
     +'</div>';
 
-  el.innerHTML=kpisHtml+agendaHtml+'<h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">Empresas por calor</h3>'+cardsHtml;
+  el.innerHTML=kpisHtml+bdayHtml+agendaHtml+'<h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px">Empresas por calor</h3>'+cardsHtml;
 }
 
 function selectCompany(id){state.selected=id;save();closeMobileSidebar();render()}
@@ -911,6 +947,7 @@ function openContactModal(companyId,contactId,defaultLayer){
   document.getElementById('cn-next-date').value=ct.nextDate||'';
   document.getElementById('cn-last-date').value=ct.lastDate||'';
   document.getElementById('cn-cadence').value=ct.cadence||'';
+  document.getElementById('cn-birthday').value=ct.birthday||'';
   document.getElementById('cn-history').value=ct.history||'';
   document.getElementById('cn-delete').style.display=contactId?'inline-block':'none';
   document.getElementById('contactModal').classList.add('open');
@@ -934,6 +971,7 @@ function saveContact(){
     nextDate:document.getElementById('cn-next-date').value,
     lastDate:document.getElementById('cn-last-date').value,
     cadence:parseInt(document.getElementById('cn-cadence').value)||0,
+    birthday:document.getElementById('cn-birthday').value,
     history:document.getElementById('cn-history').value
   };
   if(!data.name){alert('Nome obrigatório');return}
@@ -1336,6 +1374,38 @@ function compressImage(file,callback){
   reader.readAsDataURL(file);
 }
 
+function checkBirthday(bday){
+  if(!bday)return null;
+  var today=new Date();today.setHours(0,0,0,0);
+  var parts=bday.split('-');
+  var thisYear=new Date(today.getFullYear(),parseInt(parts[1])-1,parseInt(parts[2]));
+  var diff=Math.floor((thisYear-today)/86400000);
+  if(diff<0){thisYear.setFullYear(today.getFullYear()+1);diff=Math.floor((thisYear-today)/86400000)}
+  if(diff===0)return 'HOJE!';
+  if(diff<=7)return 'em '+diff+'d';
+  if(diff<=30)return parts[2]+'/'+parts[1];
+  return null;
+}
+
+function getBirthdayAlerts(){
+  var alerts=[];
+  state.companies.forEach(function(co){
+    co.contacts.forEach(function(ct){
+      if(!ct.birthday)return;
+      var bd=checkBirthday(ct.birthday);
+      if(!bd)return;
+      var parts=ct.birthday.split('-');
+      var today=new Date();today.setHours(0,0,0,0);
+      var thisYear=new Date(today.getFullYear(),parseInt(parts[1])-1,parseInt(parts[2]));
+      var diff=Math.floor((thisYear-today)/86400000);
+      if(diff<0){diff+=365}
+      alerts.push({ct:ct,co:co,label:bd,diff:diff,date:parts[2]+'/'+parts[1]});
+    });
+  });
+  alerts.sort(function(a,b){return a.diff-b.diff});
+  return alerts;
+}
+
 function initials(name){
   if(!name)return '?';
   var parts=String(name).trim().split(/\s+/).filter(function(p){return p.length>0});
@@ -1357,6 +1427,27 @@ function computeGap(lastDate,cadence){
     return {cls:'ok',label:'ok '+days+'/'+cadence+'d',overdue:overdue,days:days}
   }
   return {cls:'over',label:'gap '+overdue+'d',overdue:overdue,days:days}
+}
+
+function openBdayReport(){
+  var alerts=getBirthdayAlerts();
+  var html='<h3 style="display:flex;align-items:center;gap:8px">🎂 Aniversários Próximos <span style="font-size:12px;color:var(--muted);font-weight:400">'+alerts.length+' nos próximos 30 dias</span></h3>';
+  if(alerts.length===0){
+    html+='<div style="padding:30px;text-align:center;color:var(--muted)">Nenhum aniversário próximo. Preencha as datas nos contatos.</div>';
+  } else {
+    alerts.forEach(function(a){
+      var highlight=a.diff===0?'background:#fce7f3;font-weight:700':'';
+      html+='<div class="bday-item" style="'+highlight+'" onclick="closeModal(\'bdayModal\');setView(\'map\');selectCompany(\''+a.co.id+'\');openContactModal(\''+a.co.id+'\',\''+a.ct.id+'\')">'
+        +'<span class="bi-date">'+a.date+'</span>'
+        +'<span style="font-weight:600;flex:1">'+escapeHtml(a.ct.name)+'</span>'
+        +'<span style="color:var(--muted);font-size:11px">'+escapeHtml(a.co.name)+'</span>'
+        +'<span class="bday-badge">'+a.label+'</span>'
+        +'</div>';
+    });
+  }
+  html+='<div class="modal-actions"><button class="btn primary" onclick="closeModal(\'bdayModal\')" style="margin-left:auto">Fechar</button></div>';
+  document.getElementById('bdayModal').querySelector('.modal-box').innerHTML=html;
+  document.getElementById('bdayModal').classList.add('open');
 }
 
 function openGapReport(){
