@@ -320,7 +320,10 @@
       <div class="field"><label>Nome</label><input id="cn-name" type="text" autocomplete="off"/></div>
       <div class="field"><label>Camada</label><select id="cn-layer" autocomplete="off"><option value="c">C-Level</option><option value="d">Diretoria</option><option value="o">Operação</option></select></div>
     </div>
-    <div class="field"><label>Cargo</label><input id="cn-role" type="text" autocomplete="off" placeholder="ex: Diretor de CX"/></div>
+    <div class="field-row">
+      <div class="field"><label>Cargo</label><input id="cn-role" type="text" autocomplete="off" placeholder="ex: Diretor de CX"/></div>
+      <div class="field"><label>Gestor direto</label><input id="cn-manager" type="text" autocomplete="off" placeholder="ex: Nome do VP"/></div>
+    </div></div>
     <div class="field-row">
       <div class="field"><label>E-mail</label><input id="cn-email" type="text" autocomplete="off" name="no-email-autofill"/></div>
       <div class="field"><label>Celular</label><input id="cn-phone" type="text" autocomplete="off" name="no-phone-autofill"/></div>
@@ -896,6 +899,7 @@ function openContactModal(companyId,contactId,defaultLayer){
   document.getElementById('cn-name').value=ct.name||'';
   document.getElementById('cn-layer').value=ct.layer||'d';
   document.getElementById('cn-role').value=ct.role||'';
+  document.getElementById('cn-manager').value=ct.manager||'';
   document.getElementById('cn-email').value=ct.email||'';
   document.getElementById('cn-phone').value=ct.phone||'';
   document.getElementById('cn-linkedin').value=ct.linkedin||'';
@@ -919,6 +923,7 @@ function saveContact(){
     name:document.getElementById('cn-name').value.trim(),
     layer:document.getElementById('cn-layer').value,
     role:document.getElementById('cn-role').value.trim(),
+    manager:document.getElementById('cn-manager').value.trim(),
     email:document.getElementById('cn-email').value.trim(),
     phone:document.getElementById('cn-phone').value.trim(),
     linkedin:document.getElementById('cn-linkedin').value.trim(),
