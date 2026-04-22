@@ -618,7 +618,7 @@ document.addEventListener('click',function(e){
 function renderSidebar(){
   var el=document.getElementById('companyList');
   var filtered=state.companies;
-  if(_companyFilter){filtered=filtered.filter(function(c){return c.name.toLowerCase().indexOf(_companyFilter)>-1})}
+  if(_companyFilter){filtered=filtered.filter(function(c){return (c.name+' '+c.sector+' '+c.tier).toLowerCase().indexOf(_companyFilter)>-1})}
   if(filtered.length===0&&_companyFilter){el.innerHTML='<div style="color:var(--muted);padding:12px;font-size:12px">Nenhuma empresa encontrada.</div>';return}
   if(state.companies.length===0){el.innerHTML='<div style="color:var(--muted);padding:12px;font-size:12px">Nenhuma empresa. Clique em + Empresa.</div>';return}
   el.innerHTML=filtered.map(function(c){
