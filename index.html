@@ -684,9 +684,11 @@ function renderContent(){
       if(ct.email)chans.push('<span title="'+escapeHtml(ct.email)+'">✉</span>');
       if(ct.phone)chans.push('<span title="'+escapeHtml(ct.phone)+'">📱</span>');
       if(ct.linkedin)chans.push('<a href="'+escapeHtml(ct.linkedin)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;color:inherit" title="LinkedIn">in</a>');
-      var nextLabel=ct.next||'';
-      if(ct.nextDate){var dp=ct.nextDate.split('-');nextLabel+=(nextLabel?' · ':'')+dp[2]+'/'+dp[1]}
-      if(nextLabel)chans.push('<span title="'+escapeHtml(nextLabel)+'">⏰</span>');
+      if(ct.next){
+        var nextLabel=ct.next;
+        if(ct.nextDate){var dp=ct.nextDate.split('-');nextLabel+=' · '+dp[2]+'/'+dp[1]}
+        chans.push('<span title="'+escapeHtml(nextLabel)+'">⏰</span>');
+      }
       var bdayHtml='';
       if(ct.birthday){
         var bd=checkBirthday(ct.birthday);
