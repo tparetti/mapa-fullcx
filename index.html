@@ -163,6 +163,19 @@
   .st-booked{background:#dbeafe;color:#1e40af}
   .st-won{background:#d1fae5;color:#065f46}
   .st-lost{background:#fee2e2;color:#991b1b}
+  .meetings{background:#fff;border:1px solid var(--line);border-radius:10px;margin-top:18px;overflow:hidden}
+  .meetings .m-head{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border-bottom:1px solid var(--line)}
+  .meetings .m-head h3{margin:0;font-size:14px;display:flex;align-items:center;gap:8px}
+  .m-timeline{padding:14px 16px}
+  .m-entry{position:relative;padding:0 0 16px 24px;border-left:2px solid var(--line)}
+  .m-entry:last-child{border-left-color:transparent;padding-bottom:0}
+  .m-entry::before{content:'';position:absolute;left:-6px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--acc);border:2px solid #fff}
+  .m-entry .m-date{font-size:11px;font-weight:700;color:var(--acc);margin-bottom:2px}
+  .m-entry .m-participants{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .m-entry .m-notes{font-size:12.5px;line-height:1.5;color:var(--ink);white-space:pre-wrap}
+  .m-entry .m-actions{display:flex;gap:4px;margin-top:6px}
+  .m-entry .m-actions button{font-size:10px;padding:2px 8px}
+  .m-empty{padding:20px;text-align:center;color:var(--muted);font-size:12px}
   .mob-menu-btn{display:none;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:16px;cursor:pointer;color:var(--ink)}
   @media(max-width:768px){.mob-menu-btn{display:inline-block}}
   .mob-close{position:absolute;top:10px;right:14px;font-size:20px;cursor:pointer;color:var(--muted);background:none;border:none}
@@ -314,6 +327,21 @@
 
 <div class="modal" id="gapModal"><div class="modal-box" style="width:min(800px,95vw)"></div></div>
 <div class="modal" id="bdayModal"><div class="modal-box" style="width:min(600px,95vw)"></div></div>
+
+<div class="modal" id="meetingModal">
+  <div class="modal-box" style="width:min(600px,95vw)">
+    <h3 id="mt-title">Nova Reunião</h3>
+    <div class="field"><label>Data</label><input id="mt-date" type="date"/></div>
+    <div class="field"><label>Participantes</label><input id="mt-participants" type="text" autocomplete="off" placeholder="ex: Thiago, Tatiana Rhinow, Felipe Ferrari"/></div>
+    <div class="field"><label>Notas / pauta / decisões</label><textarea id="mt-notes" style="min-height:120px" placeholder="O que foi discutido, decisões tomadas, próximos passos..."></textarea></div>
+    <div class="modal-actions">
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn ghost" onclick="closeModal('meetingModal')">Cancelar</button>
+        <button class="btn primary" onclick="saveMeeting()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal" id="contactModal">
   <div class="modal-box">
@@ -727,6 +755,29 @@ function renderContent(){
     });
     html+='</div></div></div>'
   });
+
+  // Meetings timeline
+  var meetings=(c.meetings||[]).slice().sort(function(a,b){return b.date.localeCompare(a.date)});
+  html+='<div class="meetings"><div class="m-head"><h3>📋 Reuniões e Notas</h3>'
+    +'<button class="btn sm" onclick="openMeetingModal(\''+c.id+'\')">+ Reunião</button></div>';
+  if(meetings.length===0){
+    html+='<div class="m-empty">Nenhuma reunião registrada. Clique em + Reunião pra começar.</div>';
+  } else {
+    html+='<div class="m-timeline">';
+    meetings.forEach(function(m){
+      var dp=m.date.split('-');
+      html+='<div class="m-entry">'
+        +'<div class="m-date">'+dp[2]+'/'+dp[1]+'/'+dp[0]+'</div>'
+        +(m.participants?'<div class="m-participants">👥 '+escapeHtml(m.participants)+'</div>':'')
+        +'<div class="m-notes">'+escapeHtml(m.notes)+'</div>'
+        +'<div class="m-actions">'
+        +'<button class="btn sm ghost" onclick="openMeetingModal(\''+c.id+'\',\''+m.id+'\')">editar</button>'
+        +'<button class="btn sm ghost danger" onclick="deleteMeeting(\''+c.id+'\',\''+m.id+'\')">excluir</button>'
+        +'</div></div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
 
   el.innerHTML=html;
 }
@@ -1450,6 +1501,40 @@ function openBdayReport(){
   html+='<div class="modal-actions"><button class="btn primary" onclick="closeModal(\'bdayModal\')" style="margin-left:auto">Fechar</button></div>';
   document.getElementById('bdayModal').querySelector('.modal-box').innerHTML=html;
   document.getElementById('bdayModal').classList.add('open');
+}
+
+var _editMeeting={coId:null,mtId:null};
+function openMeetingModal(coId,mtId){
+  _editMeeting={coId:coId,mtId:mtId||null};
+  var c=state.companies.find(function(x){return x.id===coId});
+  var mt=mtId?(c.meetings||[]).find(function(x){return x.id===mtId}):null;
+  document.getElementById('mt-title').textContent=mt?'Editar Reunião':'Nova Reunião';
+  document.getElementById('mt-date').value=mt?mt.date:new Date().toISOString().slice(0,10);
+  document.getElementById('mt-participants').value=mt?mt.participants||'':'';
+  document.getElementById('mt-notes').value=mt?mt.notes||'':'';
+  document.getElementById('meetingModal').classList.add('open');
+}
+function saveMeeting(){
+  var c=state.companies.find(function(x){return x.id===_editMeeting.coId});
+  if(!c)return;
+  if(!c.meetings)c.meetings=[];
+  var date=document.getElementById('mt-date').value;
+  var participants=document.getElementById('mt-participants').value.trim();
+  var notes=document.getElementById('mt-notes').value.trim();
+  if(!date||!notes){alert('Preencha data e notas');return}
+  if(_editMeeting.mtId){
+    var mt=c.meetings.find(function(x){return x.id===_editMeeting.mtId});
+    if(mt){mt.date=date;mt.participants=participants;mt.notes=notes}
+  } else {
+    c.meetings.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,5),date:date,participants:participants,notes:notes});
+  }
+  save();render();closeModal('meetingModal');
+}
+function deleteMeeting(coId,mtId){
+  var c=state.companies.find(function(x){return x.id===coId});
+  if(!c||!confirm('Excluir reunião?'))return;
+  c.meetings=(c.meetings||[]).filter(function(x){return x.id!==mtId});
+  save();render();
 }
 
 function openGapReport(){
