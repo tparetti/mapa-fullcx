@@ -683,7 +683,12 @@ function renderContent(){
     list.forEach(function(ct){
       var chans=[];
       if(ct.email)chans.push('<span title="'+escapeHtml(ct.email)+'">✉</span>');
-      if(ct.phone)chans.push('<span title="'+escapeHtml(ct.phone)+'">📱</span>');
+      if(ct.phone){
+        var waNum=ct.phone.replace(/[^0-9]/g,'');
+        if(waNum.length<=11)waNum='55'+waNum;
+        chans.push('<span title="'+escapeHtml(ct.phone)+'">📱</span>');
+        chans.push('<a href="https://wa.me/'+waNum+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;font-size:11px" title="WhatsApp '+escapeHtml(ct.phone)+'">💬</a>');
+      }
       if(ct.linkedin)chans.push('<a href="'+escapeHtml(ct.linkedin)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;color:inherit" title="LinkedIn">in</a>');
       if(ct.next){
         var nextLabel=ct.next;
