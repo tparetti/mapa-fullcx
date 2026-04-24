@@ -435,44 +435,6 @@ function schedulePush(blob){
 
 async function pushToCloud(localBlob){
   if(!_sync.token||!_sync.gistId)return;
-  try{
-    // Pull remote first, merge, then push
-    var remote=await pullFromCloud();
-    if(remote&&remote.ct){
-      try{
-        var remoteState=await decryptState(_authKey,remote);
-        if(remoteState&&remoteState.companies){
-          // Merge: for each company in remote that has MORE contacts than local, keep remote's contacts
-          var localCompanies=state.companies||[];
-          remoteState.companies.forEach(function(rc){
-            var lc=localCompanies.find(function(x){return x.id===rc.id||x.name===rc.name});
-            if(!lc){
-              // Company exists in remote but not local — add it
-              localCompanies.push(rc);
-            } else {
-              // Merge contacts: add any remote contacts missing from local
-              (rc.contacts||[]).forEach(function(rct){
-                var exists=lc.contacts.some(function(x){return x.id===rct.id||x.name.toUpperCase()===rct.name.toUpperCase()});
-                if(!exists)lc.contacts.push(rct);
-              });
-              // Merge meetings
-              if(rc.meetings&&rc.meetings.length){
-                if(!lc.meetings)lc.meetings=[];
-                rc.meetings.forEach(function(rm){
-                  if(!lc.meetings.some(function(x){return x.id===rm.id}))lc.meetings.push(rm);
-                });
-              }
-            }
-          });
-          state.companies=localCompanies;
-          // Re-encrypt merged state
-          localBlob=await encryptState(_authKey,state);
-          localStorage.setItem('fullcx_enc',JSON.stringify(localBlob));
-        }
-      }catch(e){console.warn('merge decrypt fail, pushing local only',e)}
-    }
-  }catch(e){console.warn('pull-before-push fail, pushing local only',e)}
-
   var body={files:{'data.enc.json':{content:JSON.stringify(localBlob)}}};
   var r=await fetch('https://api.github.com/gists/'+_sync.gistId,{
     method:'PATCH',
