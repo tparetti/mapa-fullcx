@@ -383,6 +383,20 @@
 
 <script>
 var state={companies:[],selected:null};
+
+// Pending contacts to merge on login (injected server-side, cleared after merge)
+var PENDING_MERGE=[
+  {company:"GRUPO RECOVERY",contacts:[
+    {layer:"c",name:"Bruno Franco",role:"CEO",phone:"(11) 96398-6523"},
+    {layer:"d",name:"Claudia Andrade",role:"Diretora",phone:"(11) 99262-6120"},
+    {layer:"o",name:"Camila Flaquer",role:"Head de Digital e Produtos",phone:"(11) 98209-9169"},
+    {layer:"o",name:"Daniela Fachini",role:"Gerente Cobrança",phone:"(11) 99180-7191"},
+    {layer:"o",name:"Keila Rodrigues",role:"Gerente",phone:"(11) 98130-4214"},
+    {layer:"o",name:"Renata Dourigo",role:"Gerente",phone:"(11) 98671-9272"},
+    {layer:"o",name:"Claudio Almeida",role:"Coordenador Cobrança",phone:"(11) 99108-9784"},
+    {layer:"o",name:"Ricardo Magaroto",role:"Coordenador",phone:"(11) 97524-3335"},
+  ]}
+];
 var editingCompany=null, editingContact=null;
 var _authKey=null;
 var _sync={token:null,gistId:null,loading:false,pending:false,lastPush:0};
@@ -558,6 +572,27 @@ async function doLogin(){
     var blob=await encryptState(_authKey,state);
     localStorage.setItem('fullcx_enc',JSON.stringify(blob));
     console.log('[login] loaded from',best.src,'companies=',best.count)
+
+    // Apply pending merges from HTML
+    if(PENDING_MERGE&&PENDING_MERGE.length){
+      var merged=0;
+      PENDING_MERGE.forEach(function(pm){
+        var co=state.companies.find(function(x){return x.name.toUpperCase()===pm.company.toUpperCase()});
+        if(!co)return;
+        pm.contacts.forEach(function(pc){
+          var exists=co.contacts.some(function(x){return x.name.toUpperCase()===pc.name.toUpperCase()});
+          if(exists)return;
+          co.contacts.push({
+            id:uid(),layer:pc.layer,name:pc.name,role:pc.role,
+            email:'',phone:pc.phone||'',linkedin:'',photoUrl:'',
+            status:'cold',next:'',nextDate:'',lastDate:'',
+            cadence:{c:60,d:30,o:15}[pc.layer],tag:'',birthday:'',manager:'',history:''
+          });
+          merged++;
+        });
+      });
+      if(merged>0){console.log('[merge] '+merged+' contatos adicionados via PENDING_MERGE');save()}
+    }
 
     document.getElementById('login').style.display='none';
     document.getElementById('app').style.display='flex';
