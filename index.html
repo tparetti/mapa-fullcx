@@ -387,6 +387,10 @@ var state={companies:[],selected:null};
 
 // Pending contacts to merge on login (injected server-side, cleared after merge)
 var PENDING_MERGE=[];
+var PENDING_UPDATES=[
+  {company:"SEM PARAR",name:"Diego Augusto de Mattos",field:"email",value:"diego.mattos@corpay.com.br"},
+  {company:"SEM PARAR",name:"Alexandre Monteiro",field:"email",value:"alexandre.monteiro@corpay.com.br"}
+];
 var editingCompany=null, editingContact=null;
 var _authKey=null;
 var _sync={token:null,gistId:null,loading:false,pending:false,lastPush:0};
@@ -544,6 +548,20 @@ async function doLogin(){
         });
       });
       if(merged>0){console.log('[merge] '+merged+' contatos adicionados via PENDING_MERGE');save()}
+    }
+    // Apply pending field updates
+    if(PENDING_UPDATES&&PENDING_UPDATES.length){
+      var updated=0;
+      PENDING_UPDATES.forEach(function(pu){
+        var co=state.companies.find(function(x){return x.name.toUpperCase()===pu.company.toUpperCase()});
+        if(!co)return;
+        var ct=co.contacts.find(function(x){return x.name.toUpperCase()===pu.name.toUpperCase()});
+        if(!ct)return;
+        if(ct[pu.field]===pu.value)return;
+        ct[pu.field]=pu.value;
+        updated++;
+      });
+      if(updated>0){console.log('[update] '+updated+' campos atualizados via PENDING_UPDATES');save()}
     }
 
     document.getElementById('login').style.display='none';
