@@ -1254,15 +1254,22 @@ function exportPDF(){
 function exportExcel(){
   var layerNames={c:'C-Level',d:'Diretoria',o:'Operação'};
   var sep='\t';
-  var headers=['Empresa','Setor','Tier','Iniciativa','Camada','Nome','Cargo','Gestor Direto','Papel','Status','Celular','E-mail','LinkedIn','Último Contato','Meta Frequência (dias)','Próxima Ação','Data Próxima Ação','Aniversário'];
+  var headers=['EMPRESA','CONTATO','CARGO','CAMADA','CELULAR','E-MAIL','GESTOR DIRETO','LINKEDIN','DATA ANIVERSÁRIO','STATUS'];
   var rows=[headers.join(sep)];
-  state.companies.forEach(function(co){
+  var sorted=state.companies.slice().sort(function(a,b){return a.name.localeCompare(b.name)});
+  sorted.forEach(function(co){
     co.contacts.forEach(function(ct){
       var row=[
-        co.name, co.sector||'', co.tier||'', co.init||'',
-        layerNames[ct.layer]||ct.layer, ct.name||'', ct.role||'', ct.manager||'',
-        ct.tag||'', ct.status||'', ct.phone||'', ct.email||'', ct.linkedin||'',
-        ct.lastDate||'', ct.cadence||'', ct.next||'', ct.nextDate||'', ct.birthday||''
+        co.name,
+        ct.name||'',
+        ct.role||'',
+        layerNames[ct.layer]||ct.layer,
+        ct.phone||'',
+        ct.email||'',
+        ct.manager||'',
+        ct.linkedin||'',
+        ct.birthday||'',
+        (ct.status||'').toUpperCase()
       ];
       rows.push(row.map(function(v){return String(v).replace(/\t/g,' ').replace(/\n/g,' ')}).join(sep));
     });
@@ -1271,7 +1278,7 @@ function exportExcel(){
   var blob=new Blob([bom+rows.join('\n')],{type:'text/tab-separated-values;charset=utf-8'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='mapa-fullcx-contatos-'+new Date().toISOString().slice(0,10)+'.xls';
+  a.download='Mapa_Contatos_FullCX_'+new Date().toISOString().slice(0,10)+'.xls';
   a.click();
 }
 
