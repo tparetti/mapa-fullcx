@@ -266,6 +266,7 @@ if(!location.search.match(/v=2/)){location.replace(location.pathname+'?v=2')}
     <button class="btn sm ghost" onclick="exportData()">Exportar</button>
     <button class="btn sm ghost" onclick="importData()">Importar</button>
     <button class="btn sm ghost" onclick="exportPDF()" title="Exportar empresa atual como PDF">📄 PDF</button>
+    <button class="btn sm ghost" onclick="exportExcel()" title="Exportar todos contatos em Excel">📊 Excel</button>
     <div style="position:relative">
       <div class="exec-search"><input type="text" id="execSearch" placeholder="Buscar executivo..." oninput="searchExec()" onfocus="searchExec()" autocomplete="off"/></div>
       <div class="exec-results" id="execResults"></div>
@@ -1248,6 +1249,30 @@ function exportPDF(){
     if(img.complete){loaded++;if(loaded>=total)setTimeout(function(){w.print()},300)}
     else{img.onload=img.onerror=function(){loaded++;if(loaded>=total)setTimeout(function(){w.print()},300)}}
   });
+}
+
+function exportExcel(){
+  var layerNames={c:'C-Level',d:'Diretoria',o:'Operação'};
+  var sep='\t';
+  var headers=['Empresa','Setor','Tier','Iniciativa','Camada','Nome','Cargo','Gestor Direto','Papel','Status','Celular','E-mail','LinkedIn','Último Contato','Meta Frequência (dias)','Próxima Ação','Data Próxima Ação','Aniversário'];
+  var rows=[headers.join(sep)];
+  state.companies.forEach(function(co){
+    co.contacts.forEach(function(ct){
+      var row=[
+        co.name, co.sector||'', co.tier||'', co.init||'',
+        layerNames[ct.layer]||ct.layer, ct.name||'', ct.role||'', ct.manager||'',
+        ct.tag||'', ct.status||'', ct.phone||'', ct.email||'', ct.linkedin||'',
+        ct.lastDate||'', ct.cadence||'', ct.next||'', ct.nextDate||'', ct.birthday||''
+      ];
+      rows.push(row.map(function(v){return String(v).replace(/\t/g,' ').replace(/\n/g,' ')}).join(sep));
+    });
+  });
+  var bom='\uFEFF';
+  var blob=new Blob([bom+rows.join('\n')],{type:'text/tab-separated-values;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='mapa-fullcx-contatos-'+new Date().toISOString().slice(0,10)+'.xls';
+  a.click();
 }
 
 function exportData(){
