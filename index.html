@@ -389,7 +389,8 @@ var state={companies:[],selected:null};
 var PENDING_MERGE=[];
 var PENDING_UPDATES=[
   {company:"SEM PARAR",name:"Diego Augusto de Mattos",field:"email",value:"diego.mattos@corpay.com.br"},
-  {company:"SEM PARAR",name:"Alexandre Monteiro",field:"email",value:"alexandre.monteiro@corpay.com.br"}
+  {company:"SEM PARAR",name:"Alexandre Monteiro",field:"email",value:"alexandre.monteiro@corpay.com.br"},
+  {company:"SEM PARAR",name:"Wagner Gramigna",field:"email",value:"wagner.gramigna@corpay.com.br"}
 ];
 var editingCompany=null, editingContact=null;
 var _authKey=null;
@@ -489,27 +490,34 @@ async function doLogin(){
     _sync.token=bundle.token;_sync.gistId=bundle.gist_id;
     localStorage.setItem('fullcx_meta',JSON.stringify({salt:syncBlob.salt,iters:syncBlob.iters}));
 
-    // 2. Strict priority: cloud > local > seed. Never "upgrade" to seed if cloud has data.
+    // 2. Load from LOCAL first (preserves unsaved edits), then cloud, then seed
     var best=null;
-    // Try cloud first
+    var localState=null;
+    var cloudState=null;
+
+    // Try local first (user's latest edits live here)
+    var loc=localStorage.getItem('fullcx_enc');
+    if(loc){try{
+      localState=await decryptState(_authKey,JSON.parse(loc));
+      if(localState&&localState.companies)best={src:'local',state:localState,count:localState.companies.length}
+    }catch(_){}}
+
+    // Try cloud
     try{
       var remote=await pullFromCloud();
       if(remote&&remote.ct){
         try{
-          var s=await decryptState(_authKey,remote);
-          if(s&&s.companies)best={src:'cloud',state:s,count:s.companies.length}
+          cloudState=await decryptState(_authKey,remote);
         }catch(e){console.warn('decrypt cloud fail',e)}
       }
     }catch(e){console.warn('pull fail',e)}
-    // Fallback: local (only if cloud failed/missing)
-    if(!best){
-      var loc=localStorage.getItem('fullcx_enc');
-      if(loc){try{
-        var sl=await decryptState(_authKey,JSON.parse(loc));
-        if(sl&&sl.companies)best={src:'local',state:sl,count:sl.companies.length}
-      }catch(_){}}
+
+    // If local is empty but cloud has data, use cloud
+    if(!best&&cloudState&&cloudState.companies){
+      best={src:'cloud',state:cloudState,count:cloudState.companies.length}
     }
-    // Fallback: seed (only first-ever login with no cloud and no local)
+
+    // Fallback: seed
     if(!best){
       try{
         var seedResp=await fetch('seed.enc.json',{cache:'no-store'});
@@ -524,9 +532,9 @@ async function doLogin(){
     if(!best){throw new Error('Não consegui decriptar — verifique a senha')}
     state=best.state;
 
-    // NUNCA push no login. Só cache local. Push acontece apenas em edição real do usuário.
-    var blob=await encryptState(_authKey,state);
-    localStorage.setItem('fullcx_enc',JSON.stringify(blob));
+    // Cache locally
+    var encBlob=await encryptState(_authKey,state);
+    localStorage.setItem('fullcx_enc',JSON.stringify(encBlob));
     console.log('[login] loaded from',best.src,'companies=',best.count)
 
     // Apply pending merges from HTML
