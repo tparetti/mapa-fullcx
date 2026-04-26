@@ -386,7 +386,16 @@
 var state={companies:[],selected:null};
 
 // Pending contacts to merge on login (injected server-side, cleared after merge)
-var PENDING_MERGE=[];
+var PENDING_MERGE=[
+  {company:"CPFL",contacts:[
+    {layer:"c",name:"Flavio Ribeiro",role:"VP",phone:"(11) 99955-2858",email:"flavio.ribeiro@cpfl.com.br"},
+    {layer:"d",name:"Rafael Brito",role:"Head de Arquitetura e Soluções Empresariais",phone:"(11) 99616-3752",email:"Rafael.brito@cpfl.com.br"},
+    {layer:"o",name:"Adriano Giacometti",role:"IT Digital",phone:"(19) 99111-5331",email:"agiacomettidesouzalemes@cpfl.com.br"},
+    {layer:"o",name:"Luana Scannapiecco",role:"",phone:"(19) 99369-1089",email:"Luana.ferreira@cpfl.com.br"},
+    {layer:"o",name:"Leandro Piovezan",role:"Coordenador",phone:"(17) 99158-1794",email:"ldpiovezan@cpfl.com.br"},
+    {layer:"o",name:"Silvar Baldivino",role:"Especialista em Digital",phone:"(19) 98129-7251",email:"sbaldiviopereira@cpfl.com.br"},
+  ]}
+];
 var PENDING_UPDATES=[
   {company:"SEM PARAR",name:"Diego Augusto de Mattos",field:"email",value:"diego.mattos@corpay.com.br"},
   {company:"SEM PARAR",name:"Alexandre Monteiro",field:"email",value:"alexandre.monteiro@corpay.com.br"},
@@ -548,7 +557,7 @@ async function doLogin(){
           if(exists)return;
           co.contacts.push({
             id:uid(),layer:pc.layer,name:pc.name,role:pc.role,
-            email:'',phone:pc.phone||'',linkedin:'',photoUrl:'',
+            email:pc.email||'',phone:pc.phone||'',linkedin:'',photoUrl:'',
             status:'cold',next:'',nextDate:'',lastDate:'',
             cadence:{c:60,d:30,o:15}[pc.layer],tag:'',birthday:'',manager:'',history:''
           });
