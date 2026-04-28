@@ -1283,29 +1283,22 @@ function exportPDF(){
 
 function exportExcel(){
   var layerNames={c:'C-Level',d:'Diretoria',o:'Operação'};
-  var sep='\t';
   var headers=['EMPRESA','CONTATO','CARGO','CAMADA','CELULAR','E-MAIL','GESTOR DIRETO','LINKEDIN','DATA ANIVERSÁRIO','STATUS'];
-  var rows=[headers.join(sep)];
   var sorted=state.companies.slice().sort(function(a,b){return a.name.localeCompare(b.name)});
+  function escX(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  var html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"/>'
+    +'<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Contatos</x:Name>'
+    +'<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
+    +'</head><body><table border="1" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:11px">'
+    +'<thead><tr>'+headers.map(function(h){return '<th style="background:#1a2233;color:#ffffff;font-weight:bold;padding:6px;text-align:left">'+escX(h)+'</th>'}).join('')+'</tr></thead><tbody>';
   sorted.forEach(function(co){
     co.contacts.forEach(function(ct){
-      var row=[
-        co.name,
-        ct.name||'',
-        ct.role||'',
-        layerNames[ct.layer]||ct.layer,
-        ct.phone||'',
-        ct.email||'',
-        ct.manager||'',
-        ct.linkedin||'',
-        ct.birthday||'',
-        (ct.status||'').toUpperCase()
-      ];
-      rows.push(row.map(function(v){return String(v).replace(/\t/g,' ').replace(/\n/g,' ')}).join(sep));
+      var row=[co.name,ct.name||'',ct.role||'',layerNames[ct.layer]||ct.layer,ct.phone||'',ct.email||'',ct.manager||'',ct.linkedin||'',ct.birthday||'',(ct.status||'').toUpperCase()];
+      html+='<tr>'+row.map(function(v){return '<td style="padding:4px 6px;mso-number-format:\\@">'+escX(v)+'</td>'}).join('')+'</tr>';
     });
   });
-  var bom='\uFEFF';
-  var blob=new Blob([bom+rows.join('\n')],{type:'text/tab-separated-values;charset=utf-8'});
+  html+='</tbody></table></body></html>';
+  var blob=new Blob(['\uFEFF'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='Mapa_Contatos_FullCX_'+new Date().toISOString().slice(0,10)+'.xls';
