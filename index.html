@@ -315,12 +315,21 @@
 
 <div class="modal" id="gapModal"><div class="modal-box" style="width:min(800px,95vw)"></div></div>
 <div class="modal" id="bdayModal"><div class="modal-box" style="width:min(600px,95vw)"></div></div>
+<div class="modal" id="photoLightbox" onclick="closeModal('photoLightbox')" style="cursor:zoom-out">
+  <div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:12px" onclick="event.stopPropagation()">
+    <img id="photoLightboxImg" alt="" style="max-width:90vw;max-height:80vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5);background:#fff"/>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="btn" onclick="changePhotoFromLightbox()">📷 Trocar foto</button>
+      <button type="button" class="btn ghost" onclick="closeModal('photoLightbox')">Fechar</button>
+    </div>
+  </div>
+</div>
 
 
 <div class="modal" id="contactModal">
   <div class="modal-box">
     <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px">
-      <div id="cn-avatar-preview" class="avatar-lg" onclick="pickAvatarFromModal()" title="Clique pra trocar foto"></div>
+      <div id="cn-avatar-preview" class="avatar-lg" onclick="handleAvatarClick()" title="Clique para ampliar"></div>
       <h3 id="cn-title" style="margin:0;flex:1">Novo Contato</h3>
     </div>
     <form autocomplete="off" onsubmit="event.preventDefault();saveContact();return false">
@@ -1351,6 +1360,19 @@ function updateAvatarPreview(ct){
   }
 }
 
+function handleAvatarClick(){
+  var photoUrl=(document.getElementById('cn-photo')||{}).value||'';
+  if(photoUrl){
+    var img=document.getElementById('photoLightboxImg');
+    if(img){img.src=photoUrl;document.getElementById('photoLightbox').classList.add('open')}
+  } else {
+    pickAvatarFromModal();
+  }
+}
+function changePhotoFromLightbox(){
+  closeModal('photoLightbox');
+  pickAvatarFromModal();
+}
 function pickAvatarFromModal(){
   if(!editingCompany)return;
   var c=state.companies.find(function(x){return x.id===editingCompany});
