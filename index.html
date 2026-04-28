@@ -788,7 +788,7 @@ function renderContent(){
         +'<button title="Editar" onclick="event.stopPropagation();openContactModal(\''+c.id+'\',\''+ct.id+'\')">✎</button>'
         +'<button class="del" title="Excluir" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\',\''+ct.id+'\')">🗑</button>'
         +'</div>'
-        +'<div class="n-head"><div class="avatar" title="Clique pra trocar foto" onclick="event.stopPropagation();pickAvatar(\''+c.id+'\',\''+ct.id+'\')" style="'+avatarStyle+'">'+avatarInitials+'</div>'
+        +'<div class="n-head"><div class="avatar" title="'+(ct.photoUrl?'Clique para ampliar':'Clique pra adicionar foto')+'" onclick="event.stopPropagation();handleNodeAvatarClick(\''+c.id+'\',\''+ct.id+'\')" style="'+avatarStyle+'">'+avatarInitials+'</div>'
         +'<div class="n-main">'
         +'<div class="n-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
         +'<div class="n-role" style="min-height:initial;margin-bottom:0">'+escapeHtml(ct.role||'—')+'</div>'
@@ -1360,18 +1360,37 @@ function updateAvatarPreview(ct){
   }
 }
 
+var _lightboxChange=null;
+function openPhotoLightbox(url,onChange){
+  var img=document.getElementById('photoLightboxImg');
+  if(!img||!url)return;
+  img.src=url;
+  _lightboxChange=onChange||null;
+  document.getElementById('photoLightbox').classList.add('open');
+}
 function handleAvatarClick(){
   var photoUrl=(document.getElementById('cn-photo')||{}).value||'';
   if(photoUrl){
-    var img=document.getElementById('photoLightboxImg');
-    if(img){img.src=photoUrl;document.getElementById('photoLightbox').classList.add('open')}
+    openPhotoLightbox(photoUrl,pickAvatarFromModal);
   } else {
     pickAvatarFromModal();
   }
 }
+function handleNodeAvatarClick(companyId,contactId){
+  var c=state.companies.find(function(x){return x.id===companyId});
+  if(!c)return;
+  var ct=c.contacts.find(function(x){return x.id===contactId});
+  if(!ct)return;
+  if(ct.photoUrl){
+    openPhotoLightbox(ct.photoUrl,function(){pickAvatar(companyId,contactId)});
+  } else {
+    pickAvatar(companyId,contactId);
+  }
+}
 function changePhotoFromLightbox(){
+  var fn=_lightboxChange;
   closeModal('photoLightbox');
-  pickAvatarFromModal();
+  if(typeof fn==='function')fn();
 }
 function pickAvatarFromModal(){
   if(!editingCompany)return;
