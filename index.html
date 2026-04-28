@@ -1286,6 +1286,13 @@ function exportExcel(){
   var headers=['EMPRESA','CONTATO','CARGO','CAMADA','CELULAR','E-MAIL','GESTOR DIRETO','LINKEDIN','DATA ANIVERSÁRIO','STATUS'];
   var sorted=state.companies.slice().sort(function(a,b){return a.name.localeCompare(b.name)});
   function escX(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  function fmtDate(v){
+    if(!v)return '';
+    var s=String(v).trim();
+    var iso=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(iso)return iso[3]+'/'+iso[2]+'/'+iso[1];
+    return s;
+  }
   var html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"/>'
     +'<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Contatos</x:Name>'
     +'<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
@@ -1293,7 +1300,8 @@ function exportExcel(){
     +'<thead><tr>'+headers.map(function(h){return '<th style="background:#1a2233;color:#ffffff;font-weight:bold;padding:6px;text-align:left">'+escX(h)+'</th>'}).join('')+'</tr></thead><tbody>';
   sorted.forEach(function(co){
     co.contacts.forEach(function(ct){
-      var row=[co.name,ct.name||'',ct.role||'',layerNames[ct.layer]||ct.layer,ct.phone||'',ct.email||'',ct.manager||'',ct.linkedin||'',ct.birthday||'',(ct.status||'').toUpperCase()];
+      var bd=ct.birthday||ct.dataAniversario||ct.aniversario||ct.birthDate||'';
+      var row=[co.name,ct.name||'',ct.role||'',layerNames[ct.layer]||ct.layer,ct.phone||'',ct.email||'',ct.manager||'',ct.linkedin||'',fmtDate(bd),(ct.status||'').toUpperCase()];
       html+='<tr>'+row.map(function(v){return '<td style="padding:4px 6px;mso-number-format:\\@">'+escX(v)+'</td>'}).join('')+'</tr>';
     });
   });
