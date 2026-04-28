@@ -367,8 +367,8 @@
       <div class="field"><label>Meta de frequência (dias)</label><input id="cn-cadence" type="number" min="1" placeholder="ex: 30"/></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>Aniversário</label><input id="cn-birthday" type="date"/></div>
-      <div class="field"></div>
+      <div class="field"><label>Aniversário (dia)</label><select id="cn-birthday-day"><option value="">—</option><option value="01">1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option><option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option><option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option></select></div>
+      <div class="field"><label>Aniversário (mês)</label><select id="cn-birthday-month"><option value="">—</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div>
     </div>
     <div class="field"><label>Histórico de interações</label><textarea id="cn-history" autocomplete="off" placeholder="Uma por linha: 13/04 - LinkedIn connect aceito"></textarea></div>
     <div class="modal-actions">
@@ -1016,7 +1016,9 @@ function openContactModal(companyId,contactId,defaultLayer){
   document.getElementById('cn-next-date').value=ct.nextDate||'';
   document.getElementById('cn-last-date').value=ct.lastDate||'';
   document.getElementById('cn-cadence').value=ct.cadence||'';
-  document.getElementById('cn-birthday').value=ct.birthday||'';
+  var bdayParts=(ct.birthday||'').match(/^\d{4}-(\d{2})-(\d{2})$/);
+  document.getElementById('cn-birthday-day').value=bdayParts?bdayParts[2]:'';
+  document.getElementById('cn-birthday-month').value=bdayParts?bdayParts[1]:'';
   document.getElementById('cn-history').value=ct.history||'';
   document.getElementById('cn-delete').style.display=contactId?'inline-block':'none';
   document.getElementById('contactModal').classList.add('open');
@@ -1040,7 +1042,7 @@ function saveContact(){
     nextDate:document.getElementById('cn-next-date').value,
     lastDate:document.getElementById('cn-last-date').value,
     cadence:parseInt(document.getElementById('cn-cadence').value)||0,
-    birthday:document.getElementById('cn-birthday').value,
+    birthday:(function(){var d=document.getElementById('cn-birthday-day').value,m=document.getElementById('cn-birthday-month').value;return (d&&m)?'2000-'+m+'-'+d:''})(),
     history:document.getElementById('cn-history').value
   };
   if(!data.name){alert('Nome obrigatório');return}
@@ -1289,8 +1291,10 @@ function exportExcel(){
   function fmtDate(v){
     if(!v)return '';
     var s=String(v).trim();
-    var iso=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if(iso)return iso[3]+'/'+iso[2]+'/'+iso[1];
+    var iso=s.match(/^\d{0,4}-?(\d{2})-(\d{2})$/);
+    if(iso)return iso[2]+'/'+iso[1];
+    var br=s.match(/^(\d{2})\/(\d{2})/);
+    if(br)return br[1]+'/'+br[2];
     return s;
   }
   var html='<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"/>'
