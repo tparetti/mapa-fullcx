@@ -99,7 +99,8 @@
   .org-grid.drop-target{background:rgba(255,107,53,.08);outline:2px dashed var(--acc);outline-offset:-2px}
   .node{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 24px;width:210px;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden}
   .n-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
-  .avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;background-size:cover;background-position:center;background-repeat:no-repeat;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;position:relative}
+  .avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;background-size:cover;background-position:center;background-repeat:no-repeat;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;position:relative;overflow:hidden}
+  .avatar img,.avatar-lg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
   .avatar:hover::after{content:'📷';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);border-radius:50%;font-size:14px}
   .avatar-lg{width:88px;height:88px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:28px;background-size:cover;background-position:center;background-repeat:no-repeat;border:3px solid #fff;box-shadow:0 0 0 1px var(--line),0 4px 12px rgba(0,0,0,.08);cursor:pointer;position:relative;background-color:#d97706}
   .avatar-lg.c{background-color:#dc2626}
@@ -651,10 +652,11 @@ function searchExec(){
   if(results.length===0){el.innerHTML='<div style="padding:14px;color:var(--muted);text-align:center;font-size:12px">Nenhum executivo encontrado</div>';el.classList.add('open');return}
   var layerColors={c:'#dc2626',d:'#d97706',o:'#059669'};
   el.innerHTML=results.slice(0,20).map(function(r){
-    var avStyle=r.ct.photoUrl?'background-image:url(\''+escapeHtml(r.ct.photoUrl)+'\');background-size:cover':'background-color:'+layerColors[r.ct.layer||'d'];
-    var ini=r.ct.photoUrl?'':initials(r.ct.name);
+    var avBg='background-color:'+layerColors[r.ct.layer||'d'];
+    var avImg=r.ct.photoUrl?'<img src="'+escapeHtml(r.ct.photoUrl)+'" onerror="this.remove()" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%"/>':'';
+    var ini=initials(r.ct.name);
     return '<div class="exec-result" onclick="jumpToContact(\''+r.co.id+'\',\''+r.ct.id+'\')">'
-      +'<div class="er-avatar" style="'+avStyle+'">'+ini+'</div>'
+      +'<div class="er-avatar" style="'+avBg+';position:relative;overflow:hidden">'+avImg+'<span>'+ini+'</span></div>'
       +'<div class="er-info"><div class="er-name">'+escapeHtml(r.ct.name)+'</div>'
       +'<div class="er-sub">'+escapeHtml(r.ct.role||'')+' · '+escapeHtml(r.co.name)+'</div></div>'
       +'<span class="status st-'+r.ct.status+'" style="font-size:9px">'+r.ct.status+'</span>'
@@ -765,8 +767,8 @@ function renderContent(){
         var g=computeGap(ct.lastDate,ct.cadence);
         gapHtml='<span class="gap-badge gap-'+g.cls+'" title="Último: '+ct.lastDate+' · Meta: '+ct.cadence+'d">'+g.label+'</span>';
       }
-      var avatarStyle=ct.photoUrl?'background-image:url(\''+escapeHtml(ct.photoUrl)+'\')':'';
-      var avatarInitials=ct.photoUrl?'':initials(ct.name);
+      var avatarImg=ct.photoUrl?'<img src="'+escapeHtml(ct.photoUrl)+'" onerror="this.remove()" alt=""/>':'';
+      var avatarInitials=initials(ct.name);
       html+='<div class="node '+layer+'" draggable="true" data-id="'+ct.id+'" data-layer="'+layer+'" '
         +'ondragstart="onNodeDragStart(event,\''+ct.id+'\',\''+layer+'\')" '
         +'ondragend="onNodeDragEnd(event)" '
@@ -779,7 +781,7 @@ function renderContent(){
         +'<button title="Editar" onclick="event.stopPropagation();openContactModal(\''+c.id+'\',\''+ct.id+'\')">✎</button>'
         +'<button class="del" title="Excluir" onclick="event.stopPropagation();quickDeleteContact(\''+c.id+'\',\''+ct.id+'\')">🗑</button>'
         +'</div>'
-        +'<div class="n-head"><div class="avatar" title="Clique pra trocar foto" onclick="event.stopPropagation();pickAvatar(\''+c.id+'\',\''+ct.id+'\')" style="'+avatarStyle+'">'+avatarInitials+'</div>'
+        +'<div class="n-head"><div class="avatar" title="Clique pra trocar foto" onclick="event.stopPropagation();pickAvatar(\''+c.id+'\',\''+ct.id+'\')">'+avatarImg+'<span class="ini">'+avatarInitials+'</span></div>'
         +'<div class="n-main">'
         +'<div class="n-name">'+escapeHtml(ct.name||'(sem nome)')+'</div>'
         +'<div class="n-role" style="min-height:initial;margin-bottom:0">'+escapeHtml(ct.role||'—')+'</div>'
@@ -1245,8 +1247,8 @@ function exportPDF(){
     html+='<div class="layer-head"><h3><span class="dot" style="background:'+layerColors[layer]+'"></span>'+layerNames[layer]+'</h3><span class="count">'+list.length+' contato(s)</span></div>';
     html+='<div class="cards">';
     list.forEach(function(ct){
-      var avInner=ct.photoUrl?'<img src="'+escapeHtml(ct.photoUrl)+'"/>':initials(ct.name);
-      var avBg=ct.photoUrl?'':'background-color:'+layerColors[layer];
+      var avInner=(ct.photoUrl?'<img src="'+escapeHtml(ct.photoUrl)+'" onerror="this.remove()"/>':'')+initials(ct.name);
+      var avBg='background-color:'+layerColors[layer];
       html+='<div class="card" style="border-top:3px solid '+layerColors[layer]+'">';
       html+='<div class="card-head"><div class="avatar" style="'+avBg+'">'+avInner+'</div>';
       html+='<div><div class="card-name">'+escapeHtml(ct.name)+'</div><div class="card-role">'+escapeHtml(ct.role||'')+'</div></div></div>';
@@ -1345,12 +1347,14 @@ function updateAvatarPreview(ct){
   var el=document.getElementById('cn-avatar-preview');
   if(!el)return;
   el.className='avatar-lg '+(ct.layer||'d');
+  el.style.backgroundImage='';
+  el.style.overflow='hidden';
+  el.style.position='relative';
+  var ini=initials(ct.name);
   if(ct.photoUrl){
-    el.style.backgroundImage='url(\''+ct.photoUrl.replace(/'/g,"\\'")+'\')';
-    el.textContent='';
+    el.innerHTML='<img src="'+escapeHtml(ct.photoUrl)+'" onerror="this.remove()" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%"/><span>'+ini+'</span>';
   } else {
-    el.style.backgroundImage='';
-    el.textContent=initials(ct.name);
+    el.textContent=ini;
   }
 }
 
