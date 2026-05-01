@@ -1486,15 +1486,17 @@ function compressImage(file,callback){
   reader.onload=function(e){
     var img=new Image();
     img.onload=function(){
-      var size=96;
+      var size=480;
       var canvas=document.createElement('canvas');
       canvas.width=size;canvas.height=size;
       var ctx=canvas.getContext('2d');
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality='high';
       // Cover fit
       var s=Math.min(img.width,img.height);
       var sx=(img.width-s)/2, sy=(img.height-s)/2;
       ctx.drawImage(img,sx,sy,s,s,0,0,size,size);
-      callback(canvas.toDataURL('image/jpeg',0.72));
+      callback(canvas.toDataURL('image/jpeg',0.88));
     };
     img.onerror=function(){alert('Erro ao carregar imagem')};
     img.src=e.target.result;
