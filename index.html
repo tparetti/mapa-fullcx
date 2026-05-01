@@ -263,6 +263,8 @@
     <button class="btn sm ghost" onclick="importData()">Importar</button>
     <button class="btn sm ghost" onclick="exportPDF()" title="Exportar empresa atual como PDF">📄 PDF</button>
     <button class="btn sm ghost" onclick="exportExcel()" title="Exportar todos contatos em Excel">📊 Excel</button>
+    <button class="btn sm ghost" onclick="document.getElementById('bulkPhotoInput').click()" title="Importar pasta de fotos (match automático pelo nome do arquivo)">📷 Fotos em lote</button>
+    <input type="file" id="bulkPhotoInput" accept="image/*" multiple webkitdirectory style="display:none" onchange="bulkImportPhotos(event)"/>
     <div style="position:relative">
       <div class="exec-search"><input type="text" id="execSearch" placeholder="Buscar executivo..." oninput="searchExec()" onfocus="searchExec()" autocomplete="off"/></div>
       <div class="exec-results" id="execResults"></div>
@@ -1502,6 +1504,67 @@ function compressImage(file,callback){
     img.src=e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+function _normName(s){return (s||'').toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+function _findContactByName(name){
+  var nn=_normName(name);
+  if(!nn)return null;
+  // exact normalized match across all contacts
+  for(var i=0;i<state.companies.length;i++){
+    var co=state.companies[i];
+    for(var j=0;j<co.contacts.length;j++){
+      if(_normName(co.contacts[j].name)===nn)return {co:co,ct:co.contacts[j]};
+    }
+  }
+  // fuzzy: all words in file name appear in contact name (or vice versa)
+  var parts=nn.split(' ').filter(function(p){return p.length>=3});
+  if(parts.length===0)return null;
+  for(var i=0;i<state.companies.length;i++){
+    var co=state.companies[i];
+    for(var j=0;j<co.contacts.length;j++){
+      var cn=_normName(co.contacts[j].name);
+      if(parts.every(function(p){return cn.indexOf(p)>-1})){
+        return {co:co,ct:co.contacts[j]};
+      }
+    }
+  }
+  return null;
+}
+
+function bulkImportPhotos(e){
+  var files=Array.from(e.target.files||[]).filter(function(f){return /^image\//.test(f.type)});
+  if(files.length===0){alert('Nenhuma imagem selecionada');return}
+  var matched=[],unmatched=[],done=0;
+  files.forEach(function(f){
+    var nameNoExt=f.name.replace(/\.[^.]+$/,'');
+    var hit=_findContactByName(nameNoExt);
+    if(hit){matched.push({file:f,nameNoExt:nameNoExt,hit:hit})}
+    else{unmatched.push(nameNoExt)}
+  });
+  if(matched.length===0){
+    alert('Nenhum dos '+files.length+' arquivos bateu com algum contato.\nNomes não reconhecidos:\n'+unmatched.slice(0,15).join('\n'));
+    e.target.value='';return;
+  }
+  var msg='Vai aplicar foto em '+matched.length+' contato(s):\n\n'+
+    matched.slice(0,15).map(function(m){return '• '+m.nameNoExt+' → '+m.hit.ct.name+' ('+m.hit.co.name+')'}).join('\n')+
+    (matched.length>15?'\n... +'+(matched.length-15)+' contato(s)':'')+
+    (unmatched.length?'\n\n⚠️ '+unmatched.length+' arquivo(s) não bateram:\n'+unmatched.slice(0,10).join('\n')+(unmatched.length>10?'\n... +'+(unmatched.length-10):''):'')+
+    '\n\nConfirma?';
+  if(!confirm(msg)){e.target.value='';return}
+  setStatus('importando fotos…');
+  matched.forEach(function(m){
+    compressImage(m.file,function(url){
+      m.hit.ct.photoUrl=url;
+      done++;
+      if(done===matched.length){
+        save();render();
+        setStatus('sincronizado');
+        alert('✓ '+done+' foto(s) aplicada(s)'+(unmatched.length?'\n\n⚠️ '+unmatched.length+' não bateram (renomeie e tente de novo)':''));
+      }
+    });
+  });
+  e.target.value='';
 }
 
 function checkBirthday(bday){
