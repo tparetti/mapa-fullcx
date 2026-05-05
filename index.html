@@ -430,21 +430,55 @@ async function decryptState(key,blob){
   return JSON.parse(new TextDecoder().decode(pt));
 }
 
+// IndexedDB key-value (sem limite de quota baixo do localStorage)
+var _idbDB=null;
+function idbOpen(){
+  if(_idbDB)return Promise.resolve(_idbDB);
+  return new Promise(function(resolve,reject){
+    var r=indexedDB.open('mapa-fullcx',1);
+    r.onupgradeneeded=function(){r.result.createObjectStore('kv')};
+    r.onsuccess=function(){_idbDB=r.result;resolve(_idbDB)};
+    r.onerror=function(){reject(r.error)};
+  });
+}
+async function idbGet(key){
+  var db=await idbOpen();
+  return new Promise(function(resolve,reject){
+    var rq=db.transaction('kv','readonly').objectStore('kv').get(key);
+    rq.onsuccess=function(){resolve(rq.result)};
+    rq.onerror=function(){reject(rq.error)};
+  });
+}
+async function idbSet(key,val){
+  var db=await idbOpen();
+  return new Promise(function(resolve,reject){
+    var tx=db.transaction('kv','readwrite');
+    tx.objectStore('kv').put(val,key);
+    tx.oncomplete=function(){resolve()};
+    tx.onerror=function(){reject(tx.error)};
+  });
+}
+
 async function loadState(){
-  var s=localStorage.getItem('fullcx_enc');
+  var s=await idbGet('fullcx_enc');
+  if(!s){
+    // migração one-time do localStorage antigo
+    var ls=localStorage.getItem('fullcx_enc');
+    if(ls){try{s=JSON.parse(ls)}catch(_){}}
+  }
   if(!s)return {companies:[],selected:null};
-  try{return await decryptState(_authKey,JSON.parse(s))}catch(e){throw new Error('decrypt failed')}
+  try{return await decryptState(_authKey,s)}catch(e){throw new Error('decrypt failed')}
 }
 async function saveState(){
   state._ts=Date.now();
   var blob=await encryptState(_authKey,state);
-  var serialized=JSON.stringify(blob);
   try{
-    localStorage.setItem('fullcx_enc',serialized);
+    await idbSet('fullcx_enc',blob);
+    // limpa localStorage antigo que pode estar inconsistente
+    try{localStorage.removeItem('fullcx_enc')}catch(_){}
   }catch(e){
-    console.error('localStorage cheio',e);
-    setStatus('local cheio — só nuvem');
-    // continua o push pra nuvem mesmo sem localStorage
+    console.error('idb save fail',e);
+    setStatus('storage local falhou — só nuvem');
   }
   schedulePush(blob);
 }
@@ -515,10 +549,15 @@ async function doLogin(){
     var localState=null;
     var cloudState=null;
 
-    // Try local first (user's latest edits live here)
-    var loc=localStorage.getItem('fullcx_enc');
+    // Try local first (IndexedDB; fallback pra localStorage antigo)
+    var loc=null;
+    try{loc=await idbGet('fullcx_enc')}catch(_){}
+    if(!loc){
+      var ls=localStorage.getItem('fullcx_enc');
+      if(ls){try{loc=JSON.parse(ls)}catch(_){}}
+    }
     if(loc){try{
-      localState=await decryptState(_authKey,JSON.parse(loc));
+      localState=await decryptState(_authKey,loc);
     }catch(_){}}
 
     // Try cloud
@@ -560,9 +599,9 @@ async function doLogin(){
     if(!best){throw new Error('Não consegui decriptar — verifique a senha')}
     state=best.state;
 
-    // Cache locally
+    // Cache locally (IndexedDB)
     var encBlob=await encryptState(_authKey,state);
-    localStorage.setItem('fullcx_enc',JSON.stringify(encBlob));
+    try{await idbSet('fullcx_enc',encBlob);localStorage.removeItem('fullcx_enc')}catch(e){console.error('idb cache fail',e)}
     console.log('[login] loaded from',best.src,'companies=',best.count)
 
     // Apply pending merges from HTML
