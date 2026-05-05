@@ -436,8 +436,16 @@ async function loadState(){
   try{return await decryptState(_authKey,JSON.parse(s))}catch(e){throw new Error('decrypt failed')}
 }
 async function saveState(){
+  state._ts=Date.now();
   var blob=await encryptState(_authKey,state);
-  localStorage.setItem('fullcx_enc',JSON.stringify(blob));
+  var serialized=JSON.stringify(blob);
+  try{
+    localStorage.setItem('fullcx_enc',serialized);
+  }catch(e){
+    console.error('localStorage cheio',e);
+    setStatus('local cheio — só nuvem');
+    // continua o push pra nuvem mesmo sem localStorage
+  }
   schedulePush(blob);
 }
 function save(){saveState().catch(function(e){console.error(e)})}
@@ -511,7 +519,6 @@ async function doLogin(){
     var loc=localStorage.getItem('fullcx_enc');
     if(loc){try{
       localState=await decryptState(_authKey,JSON.parse(loc));
-      if(localState&&localState.companies)best={src:'local',state:localState,count:localState.companies.length}
     }catch(_){}}
 
     // Try cloud
@@ -524,9 +531,18 @@ async function doLogin(){
       }
     }catch(e){console.warn('pull fail',e)}
 
-    // If local is empty but cloud has data, use cloud
-    if(!best&&cloudState&&cloudState.companies){
-      best={src:'cloud',state:cloudState,count:cloudState.companies.length}
+    // Pick the most recent valid state by _ts (or fallback to whichever exists)
+    var localTs=(localState&&localState._ts)||0;
+    var cloudTs=(cloudState&&cloudState._ts)||0;
+    var localOK=localState&&localState.companies;
+    var cloudOK=cloudState&&cloudState.companies;
+    if(localOK&&cloudOK){
+      best=cloudTs>localTs?{src:'cloud',state:cloudState,count:cloudState.companies.length}
+                          :{src:'local',state:localState,count:localState.companies.length};
+    } else if(cloudOK){
+      best={src:'cloud',state:cloudState,count:cloudState.companies.length};
+    } else if(localOK){
+      best={src:'local',state:localState,count:localState.companies.length};
     }
 
     // Fallback: seed
@@ -1488,7 +1504,7 @@ function compressImage(file,callback){
   reader.onload=function(e){
     var img=new Image();
     img.onload=function(){
-      var size=480;
+      var size=256;
       var canvas=document.createElement('canvas');
       canvas.width=size;canvas.height=size;
       var ctx=canvas.getContext('2d');
@@ -1498,7 +1514,7 @@ function compressImage(file,callback){
       var s=Math.min(img.width,img.height);
       var sx=(img.width-s)/2, sy=(img.height-s)/2;
       ctx.drawImage(img,sx,sy,s,s,0,0,size,size);
-      callback(canvas.toDataURL('image/jpeg',0.88));
+      callback(canvas.toDataURL('image/jpeg',0.82));
     };
     img.onerror=function(){alert('Erro ao carregar imagem')};
     img.src=e.target.result;
