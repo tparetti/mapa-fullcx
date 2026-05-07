@@ -406,7 +406,8 @@ var PENDING_UPDATES=[
 ];
 var editingCompany=null, editingContact=null;
 var _authKey=null;
-var _sync={token:null,gistId:null,loading:false,pending:false,lastPush:0};
+var _sync={loading:false,pending:false,lastPush:0};
+var WORKER_URL='https://tparetti-apps.thiago-paretti.workers.dev/v1/mapa-fullcx/state';
 
 function uid(){return Date.now()+'-'+Math.random().toString(36).slice(2,7)}
 
@@ -486,7 +487,6 @@ function save(){saveState().catch(function(e){console.error(e)})}
 
 var _pushTimer=null;
 function schedulePush(blob){
-  if(!_sync.token||!_sync.gistId)return;
   _sync.pending=true;
   setStatus('salvando…');
   clearTimeout(_pushTimer);
@@ -494,12 +494,10 @@ function schedulePush(blob){
 }
 
 async function pushToCloud(localBlob){
-  if(!_sync.token||!_sync.gistId)return;
-  var body={files:{'data.enc.json':{content:JSON.stringify(localBlob)}}};
-  var r=await fetch('https://api.github.com/gists/'+_sync.gistId,{
-    method:'PATCH',
-    headers:{'Authorization':'Bearer '+_sync.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
-    body:JSON.stringify(body)
+  var r=await fetch(WORKER_URL,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(localBlob)
   });
   if(!r.ok)throw new Error('push '+r.status);
   _sync.pending=false;_sync.lastPush=Date.now();
@@ -507,22 +505,11 @@ async function pushToCloud(localBlob){
 }
 
 async function pullFromCloud(){
-  if(!_sync.token||!_sync.gistId)return null;
-  var r=await fetch('https://api.github.com/gists/'+_sync.gistId,{
-    headers:{'Authorization':'Bearer '+_sync.token,'Accept':'application/vnd.github+json'},
-    cache:'no-store'
-  });
+  var r=await fetch(WORKER_URL+'?ts='+Date.now(),{cache:'no-store'});
   if(!r.ok)throw new Error('pull '+r.status);
-  var j=await r.json();
-  var f=j.files&&j.files['data.enc.json'];
-  if(!f)return null;
-  var content=f.content;
-  if(f.truncated&&f.raw_url){
-    var r2=await fetch(f.raw_url,{headers:{'Authorization':'Bearer '+_sync.token},cache:'no-store'});
-    if(!r2.ok)throw new Error('pull raw '+r2.status);
-    content=await r2.text();
-  }
-  try{return JSON.parse(content)}catch(e){return null}
+  var text=await r.text();
+  if(!text)return null;
+  try{return JSON.parse(text)}catch(e){return null}
 }
 
 function setStatus(txt){
@@ -542,12 +529,10 @@ async function doLogin(){
     if(!syncResp.ok)throw new Error('sync config não encontrada');
     var syncBlob=await syncResp.json();
     _authKey=await deriveKey(pw1,b64d(syncBlob.salt),syncBlob.iters);
-    var bundle;
+    // Verifica senha tentando decifrar sync blob (não usamos mais o conteúdo, só validação)
     try{
-      var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(syncBlob.iv)},_authKey,b64d(syncBlob.ct));
-      bundle=JSON.parse(new TextDecoder().decode(pt));
+      await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(syncBlob.iv)},_authKey,b64d(syncBlob.ct));
     }catch(e){throw new Error('Senha incorreta')}
-    _sync.token=bundle.token;_sync.gistId=bundle.gist_id;
     localStorage.setItem('fullcx_meta',JSON.stringify({salt:syncBlob.salt,iters:syncBlob.iters}));
 
     // 2. Load from LOCAL first (preserves unsaved edits), then cloud, then seed
