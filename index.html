@@ -516,7 +516,13 @@ async function pullFromCloud(){
   var j=await r.json();
   var f=j.files&&j.files['data.enc.json'];
   if(!f)return null;
-  try{return JSON.parse(f.content)}catch(e){return null}
+  var content=f.content;
+  if(f.truncated&&f.raw_url){
+    var r2=await fetch(f.raw_url,{headers:{'Authorization':'Bearer '+_sync.token},cache:'no-store'});
+    if(!r2.ok)throw new Error('pull raw '+r2.status);
+    content=await r2.text();
+  }
+  try{return JSON.parse(content)}catch(e){return null}
 }
 
 function setStatus(txt){
