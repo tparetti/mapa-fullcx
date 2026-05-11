@@ -470,27 +470,41 @@ async function loadState(){
   if(!s)return {companies:[],selected:null};
   try{return await decryptState(_authKey,s)}catch(e){throw new Error('decrypt failed')}
 }
-async function saveState(){
+async function saveState(immediate){
   state._ts=Date.now();
   var blob=await encryptState(_authKey,state);
   try{
     await idbSet('fullcx_enc',blob);
-    // limpa localStorage antigo que pode estar inconsistente
     try{localStorage.removeItem('fullcx_enc')}catch(_){}
   }catch(e){
     console.error('idb save fail',e);
     setStatus('storage local falhou — só nuvem');
   }
-  schedulePush(blob);
+  if(immediate){
+    _sync.pending=true;_pendingBlob=blob;
+    setStatus('salvando…');
+    await pushNow(blob);
+  }else{
+    schedulePush(blob);
+  }
 }
-function save(){saveState().catch(function(e){console.error(e)})}
+function save(){saveState(false).catch(function(e){console.error(e)})}
+function saveImmediate(){saveState(true).catch(function(e){console.error(e)})}
 
 var _pushTimer=null;
+var _pendingBlob=null; // mantém referência pro fail-safe no unload
 function schedulePush(blob){
   _sync.pending=true;
+  _pendingBlob=blob;
   setStatus('salvando…');
   clearTimeout(_pushTimer);
   _pushTimer=setTimeout(function(){pushToCloud(blob).catch(function(e){console.error('push fail',e);setStatus('offline')})},800);
+}
+
+// Push imediato — pra ações explícitas (salvar contato, deletar, etc.)
+async function pushNow(blob){
+  clearTimeout(_pushTimer);
+  return pushToCloud(blob).catch(function(e){console.error('pushNow fail',e);setStatus('offline')});
 }
 
 async function pushToCloud(localBlob){
@@ -501,8 +515,19 @@ async function pushToCloud(localBlob){
   });
   if(!r.ok)throw new Error('push '+r.status);
   _sync.pending=false;_sync.lastPush=Date.now();
+  _pendingBlob=null;
   setStatus('sincronizado');
 }
+
+// Fail-safe: se há push pendente no unload, dispara via sendBeacon (síncrono)
+window.addEventListener('beforeunload',function(){
+  if(_sync.pending&&_pendingBlob){
+    try{
+      var b=new Blob([JSON.stringify(_pendingBlob)],{type:'application/json'});
+      navigator.sendBeacon(WORKER_URL,b);
+    }catch(e){}
+  }
+});
 
 async function pullFromCloud(){
   var r=await fetch(WORKER_URL+'?ts='+Date.now(),{cache:'no-store'});
@@ -1122,7 +1147,7 @@ function saveContact(){
   } else {
     c.contacts.push(Object.assign({id:uid()},data));
   }
-  save();render();closeModal('contactModal');
+  saveImmediate();render();closeModal('contactModal');
 }
 
 function deleteContact(){
@@ -1130,7 +1155,7 @@ function deleteContact(){
   if(!confirm('Excluir contato?'))return;
   var c=state.companies.find(function(x){return x.id===editingCompany});
   c.contacts=c.contacts.filter(function(x){return x.id!==editingContact});
-  save();render();closeModal('contactModal');
+  saveImmediate();render();closeModal('contactModal');
 }
 
 var _coDrag={id:null};
