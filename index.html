@@ -370,7 +370,7 @@
       <div class="field"><label>Meta de frequência (dias)</label><input id="cn-cadence" type="number" min="1" placeholder="ex: 30"/></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>Aniversário (só dia/mês — ano é ignorado)</label><input id="cn-birthday" type="date"/></div>
+      <div class="field"><label>Aniversário (dia/mês)</label><input id="cn-birthday" type="text" placeholder="dd/mm" maxlength="5" inputmode="numeric"/></div>
       <div class="field"></div>
     </div>
     <div class="field"><label>Histórico de interações</label><textarea id="cn-history" autocomplete="off" placeholder="Uma por linha: 13/04 - LinkedIn connect aceito"></textarea></div>
@@ -1071,7 +1071,15 @@ function openContactModal(companyId,contactId,defaultLayer){
   document.getElementById('cn-next-date').value=ct.nextDate||'';
   document.getElementById('cn-last-date').value=ct.lastDate||'';
   document.getElementById('cn-cadence').value=ct.cadence||'';
-  document.getElementById('cn-birthday').value=ct.birthday||'';
+  // Carrega DD/MM: aceita formatos legados '2000-MM-DD' ou '-MM-DD' ou 'DD/MM'
+  document.getElementById('cn-birthday').value=(function(b){
+    if(!b)return '';
+    var m=String(b).match(/^\d{0,4}-(\d{2})-(\d{2})$/);
+    if(m)return m[2]+'/'+m[1];
+    var br=String(b).match(/^(\d{2})\/(\d{2})$/);
+    if(br)return b;
+    return '';
+  })(ct.birthday);
   document.getElementById('cn-history').value=ct.history||'';
   document.getElementById('cn-delete').style.display=contactId?'inline-block':'none';
   document.getElementById('contactModal').classList.add('open');
@@ -1095,7 +1103,16 @@ function saveContact(){
     nextDate:document.getElementById('cn-next-date').value,
     lastDate:document.getElementById('cn-last-date').value,
     cadence:parseInt(document.getElementById('cn-cadence').value)||0,
-    birthday:(function(){var v=document.getElementById('cn-birthday').value,p=v&&v.match(/^\d{4}-(\d{2})-(\d{2})$/);return p?'2000-'+p[1]+'-'+p[2]:''})(),
+    birthday:(function(){
+      var v=document.getElementById('cn-birthday').value.trim();
+      if(!v)return '';
+      // Aceita DD/MM ou DD-MM
+      var m=v.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+      if(!m)return '';
+      var d=parseInt(m[1]),mo=parseInt(m[2]);
+      if(d<1||d>31||mo<1||mo>12)return '';
+      return String(d).padStart(2,'0')+'/'+String(mo).padStart(2,'0');
+    })(),
     history:document.getElementById('cn-history').value
   };
   if(!data.name){alert('Nome obrigatório');return}
@@ -1618,16 +1635,27 @@ function bulkImportPhotos(e){
   e.target.value='';
 }
 
-function checkBirthday(bday){
+// Retorna [dia, mes] aceitando formatos: 'DD/MM', 'YYYY-MM-DD', '-MM-DD'
+function parseBirthday(bday){
   if(!bday)return null;
+  var s=String(bday).trim();
+  var m=s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(m)return [parseInt(m[1]),parseInt(m[2])];
+  m=s.match(/^\d{0,4}-(\d{2})-(\d{2})$/);
+  if(m)return [parseInt(m[2]),parseInt(m[1])];
+  return null;
+}
+
+function checkBirthday(bday){
+  var p=parseBirthday(bday);if(!p)return null;
+  var dia=p[0],mes=p[1];
   var today=new Date();today.setHours(0,0,0,0);
-  var parts=bday.split('-');
-  var thisYear=new Date(today.getFullYear(),parseInt(parts[1])-1,parseInt(parts[2]));
+  var thisYear=new Date(today.getFullYear(),mes-1,dia);
   var diff=Math.floor((thisYear-today)/86400000);
   if(diff<0){thisYear.setFullYear(today.getFullYear()+1);diff=Math.floor((thisYear-today)/86400000)}
   if(diff===0)return 'HOJE!';
   if(diff<=7)return 'em '+diff+'d';
-  if(diff<=30)return parts[2]+'/'+parts[1];
+  if(diff<=30)return String(dia).padStart(2,'0')+'/'+String(mes).padStart(2,'0');
   return null;
 }
 
@@ -1636,14 +1664,14 @@ function getBirthdayAlerts(){
   state.companies.forEach(function(co){
     co.contacts.forEach(function(ct){
       if(!ct.birthday)return;
-      var bd=checkBirthday(ct.birthday);
-      if(!bd)return;
-      var parts=ct.birthday.split('-');
+      var p=parseBirthday(ct.birthday);if(!p)return;
+      var bd=checkBirthday(ct.birthday);if(!bd)return;
+      var dia=p[0],mes=p[1];
       var today=new Date();today.setHours(0,0,0,0);
-      var thisYear=new Date(today.getFullYear(),parseInt(parts[1])-1,parseInt(parts[2]));
+      var thisYear=new Date(today.getFullYear(),mes-1,dia);
       var diff=Math.floor((thisYear-today)/86400000);
       if(diff<0){diff+=365}
-      alerts.push({ct:ct,co:co,label:bd,diff:diff,date:parts[2]+'/'+parts[1]});
+      alerts.push({ct:ct,co:co,label:bd,diff:diff,date:String(dia).padStart(2,'0')+'/'+String(mes).padStart(2,'0')});
     });
   });
   alerts.sort(function(a,b){return a.diff-b.diff});
