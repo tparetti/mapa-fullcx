@@ -537,6 +537,33 @@ async function pullFromCloud(){
   try{return JSON.parse(text)}catch(e){return null}
 }
 
+// Merge não-destrutivo: une empresas (por nome) e contatos (por id, fallback nome).
+// Garante que adições feitas em QUALQUER máquina sobrevivam — em vez de escolher um
+// blob inteiro pelo _ts e descartar o outro. Em contato que existe nos dois lados,
+// mantém os campos do lado com _ts mais recente. Retorna {state, changed}.
+function mergeStates(a,b){
+  var aTs=(a&&a._ts)||0, bTs=(b&&b._ts)||0;
+  var primary=aTs>=bTs?a:b, secondary=aTs>=bTs?b:a;
+  var out=JSON.parse(JSON.stringify(primary||{companies:[]}));
+  if(!out.companies)out.companies=[];
+  var changed=false;
+  var byName={};
+  out.companies.forEach(function(c){byName[(c.name||'').toUpperCase()]=c});
+  ((secondary&&secondary.companies)||[]).forEach(function(sc){
+    var pc=byName[(sc.name||'').toUpperCase()];
+    if(!pc){out.companies.push(JSON.parse(JSON.stringify(sc)));changed=true;return}
+    if(!pc.contacts)pc.contacts=[];
+    var ids={},names={};
+    pc.contacts.forEach(function(ct){if(ct.id)ids[ct.id]=ct;names[(ct.name||'').toUpperCase()]=ct});
+    (sc.contacts||[]).forEach(function(sct){
+      var match=(sct.id&&ids[sct.id])||names[(sct.name||'').toUpperCase()];
+      if(!match){pc.contacts.push(JSON.parse(JSON.stringify(sct)));changed=true}
+    });
+  });
+  out._ts=Math.max(aTs,bTs);
+  return {state:out,changed:changed};
+}
+
 function setStatus(txt){
   var el=document.getElementById('syncStatus');if(el)el.textContent=txt;
 }
@@ -591,9 +618,11 @@ async function doLogin(){
     var cloudTs=(cloudState&&cloudState._ts)||0;
     var localOK=localState&&localState.companies;
     var cloudOK=cloudState&&cloudState.companies;
+    var needConverge=false;
     if(localOK&&cloudOK){
-      best=cloudTs>localTs?{src:'cloud',state:cloudState,count:cloudState.companies.length}
-                          :{src:'local',state:localState,count:localState.companies.length};
+      var mg=mergeStates(localState,cloudState);
+      best={src:'merge',state:mg.state,count:mg.state.companies.length};
+      needConverge=mg.changed; // havia contato só de um lado → empurra a união pra nuvem
     } else if(cloudOK){
       best={src:'cloud',state:cloudState,count:cloudState.companies.length};
     } else if(localOK){
@@ -619,6 +648,7 @@ async function doLogin(){
     var encBlob=await encryptState(_authKey,state);
     try{await idbSet('fullcx_enc',encBlob);localStorage.removeItem('fullcx_enc')}catch(e){console.error('idb cache fail',e)}
     console.log('[login] loaded from',best.src,'companies=',best.count)
+    if(needConverge){try{await saveState(true);console.log('[merge] convergência empurrada pra nuvem')}catch(_){}}
 
     // Apply pending merges from HTML
     if(PENDING_MERGE&&PENDING_MERGE.length){
@@ -672,7 +702,9 @@ async function pullNow(){
   try{
     var remote=await pullFromCloud();
     if(remote&&remote.ct){
-      state=await decryptState(_authKey,remote);
+      var rs=await decryptState(_authKey,remote);
+      var mg=mergeStates(state,rs); // merge não-destrutivo: não descarta edições locais
+      state=mg.state;
       await saveState();
       render();
       setStatus('sincronizado');
